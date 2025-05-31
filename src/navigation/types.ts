@@ -16,6 +16,12 @@ export type RootStackParamList = {
   Chatbot: undefined;
   ARWorkout: undefined;
   ErrorOffline: undefined;
+  WorkoutDetail: { workout: any };
+  NutritionDetail: {nutrition: any};
+  HydrationDetail: {hydration: any};
+  RestDetail: {rest: any};
+  HealthTipDetail:{tip: any};
+  DidYouKnowDetail: { fact: any };
 };
 
 export type TabParamList = {

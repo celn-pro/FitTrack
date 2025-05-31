@@ -22,26 +22,37 @@ import NotificationCenter from '../screens/NotificationCenter';
 import Chatbot from '../screens/Chatbot';
 import ARWorkout from '../screens/ARWorkout';
 import ErrorOffline from '../screens/ErrorOffline';
+import WorkoutDetailScreen from '../screens/WorkoutDetailScreen';
+import NutritionDetailScreen from '../screens/NutritionDetailScreen';
+import HydrationDetailScreen from '../screens/HydrationDetailScreen';
+import RestDetailScreen from '../screens/RestDetailScreen';
+import HealthTipDetailScreen from '../screens/HealthTipDetailScreen';
+import DidYouKnowDetailScreen from '../screens/DidYouKnowDetailScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const MainTabs: React.FC = () => (
-  <Tab.Navigator
+const MainTabs: React.FC = () => {
+  const { theme } = useTheme();
+  return (
+    <Tab.Navigator
     screenOptions={({ route }) => ({
-      tabBarIcon: ({ color, size }) => {
-        let iconName: string = 'home'; // default icon
-        if (route.name === 'Home') iconName = 'home';
-        else if (route.name === 'Tracking') iconName = 'fitness-center';
-        else if (route.name === 'Profile') iconName = 'person';
-        else if (route.name === 'Social') iconName = 'group';
-        else if (route.name === 'Settings') iconName = 'settings';
-        return <Icon name={iconName} size={size} color={color} />;
-      },
-      tabBarActiveTintColor: '#4A90E2',
-      tabBarInactiveTintColor: '#666',
-      tabBarStyle: { backgroundColor: '#FFF', borderTopWidth: 0 },
-    })}
+        tabBarIcon: ({ color, size }) => {
+          let iconName: string = 'home';
+          if (route.name === 'Home') iconName = 'home';
+          else if (route.name === 'Tracking') iconName = 'fitness-center';
+          else if (route.name === 'Profile') iconName = 'person';
+          else if (route.name === 'Social') iconName = 'group';
+          else if (route.name === 'Settings') iconName = 'settings';
+          return <Icon name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.secondaryText,
+        tabBarStyle: {
+          backgroundColor: theme.colors.background,
+          borderTopWidth: 0,
+        },
+      })}
   >
     <Tab.Screen name="Home" component={Home} options={{ headerShown: false }} />
     <Tab.Screen name="Tracking" component={ActivityTracking} options={{ headerShown: false }} />
@@ -49,7 +60,8 @@ const MainTabs: React.FC = () => (
     <Tab.Screen name="Social" component={SocialFeed} options={{ headerShown: false }} />
     <Tab.Screen name="Settings" component={Settings} options={{ headerShown: false }} />
   </Tab.Navigator>
-);
+  )
+};
 
 const AppNavigator: React.FC = () => {
   const { theme } = useTheme();
@@ -74,6 +86,12 @@ const AppNavigator: React.FC = () => {
           <Stack.Screen name="Chatbot" component={Chatbot} options={{ headerShown: false }} />
           <Stack.Screen name="ARWorkout" component={ARWorkout} options={{ headerShown: false }} />
           <Stack.Screen name="ErrorOffline" component={ErrorOffline} options={{ headerShown: false }} />
+          <Stack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="NutritionDetail" component={NutritionDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="HydrationDetail" component={HydrationDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="RestDetail" component={RestDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="HealthTipDetail" component={HealthTipDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="DidYouKnowDetail" component={DidYouKnowDetailScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
     </ThemeProvider>
