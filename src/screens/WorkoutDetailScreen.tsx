@@ -18,7 +18,7 @@ const WorkoutDetailScreen: React.FC = () => {
         )}
         <Title>{workout.title}</Title>
         <Meta>
-          <MetaText>{workout.difficulty.toUpperCase()}</MetaText>
+          <MetaText>{(workout.difficulty)}</MetaText>
           <MetaText>• {workout.duration} min</MetaText>
         </Meta>
         <Description>{workout.description}</Description>

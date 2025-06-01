@@ -2,19 +2,38 @@
 import { gql } from '@apollo/client';
 
 export const GET_RECOMMENDATIONS = gql`
-  query GetRecommendations($email: String!) {
-    getRecommendations(email: $email) {
+  query GetRecommendations {
+    getRecommendations {
       id
+      category
       title
       description
-      type
-      category
-      priority
-      media
-      frequency
+      image
+      steps {
+      title
+      description
+      image
+      duration
+    }
+      tips
+      articles {
+        title
+        url
+      }
+      macros {
+        protein
+        carbs
+        fat
+      }
+      calories
+      reminders
+      dailyGoalMl
+      sleepGoalHours
+      createdAt
+      updatedAt
     }
   }
-`;
+`;;
 
 export const ON_RECOMMENDATION_UPDATE = gql`
   subscription OnRecommendationUpdate($email: String!) {

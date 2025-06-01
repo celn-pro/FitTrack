@@ -219,3 +219,218 @@ export const DID_YOU_KNOW: DidYouKnow[] = [
     link: 'https://news.vanderbilt.edu/2005/04/07/laughing-just-for-the-health-of-it-59315/'
   },
 ];
+
+export type FitnessGoal = 'Lose Weight' | 'Gain Muscle' | 'Maintain Health';
+
+export interface Course {
+  id: string;
+  goal: FitnessGoal;
+  title: string;
+  description: string;
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  coverImage?: string;
+  topics: CourseTopic[];
+}
+
+export interface CourseTopic {
+  id: string;
+  title: string;
+  description?: string;
+  steps: CourseStep[];
+  completed?: boolean; // for user progress
+}
+
+export interface CourseStep {
+  id: string;
+  title: string;
+  content: string; // explanation or instruction
+  illustration?: string; // image URL
+  videoUrl?: string;     // optional video for guidance
+  completed?: boolean;   // for user progress
+}
+
+// ...existing code...
+export const COURSES: Course[] = [
+  {
+    id: 'c1',
+    goal: 'Gain Muscle',
+    title: 'Full Body Strength',
+    description: 'A progressive course to build muscle from beginner to advanced.',
+    level: 'Beginner',
+    coverImage: 'https://example.com/cover1.jpg',
+    topics: [
+      {
+        id: 't1',
+        title: 'Introduction to Strength Training',
+        description: 'Learn the basics of muscle gain.',
+        steps: [
+          {
+            id: 's1',
+            title: 'What is Strength Training?',
+            content: 'Strength training involves...',
+            illustration: 'https://example.com/step1.jpg',
+            videoUrl: 'https://youtube.com/embed/xyz'
+          },
+          {
+            id: 's2',
+            title: 'Warming Up',
+            content: 'Always start with a warm-up...',
+            illustration: 'https://example.com/step2.jpg'
+          }
+        ]
+      },
+      {
+        id: 't2',
+        title: 'Compound Movements',
+        steps: [
+          {
+            id: 's3',
+            title: 'Squats',
+            content: 'Squats are essential for...',
+            videoUrl: 'https://youtube.com/embed/abc'
+          }
+        ]
+      }
+    ]
+  },
+  // --- Weight Loss Courses ---
+  {
+    id: 'lw1',
+    goal: 'Lose Weight',
+    title: 'Fat Loss Fundamentals',
+    description: 'Step-by-step guide to effective fat loss.',
+    level: 'Beginner',
+    coverImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836',
+    topics: [
+      {
+        id: 'lw1-t1',
+        title: 'Understanding Calories',
+        steps: [
+          {
+            id: 'lw1-s1',
+            title: 'Calorie Deficit',
+            content: 'To lose weight, you need to burn more calories than you consume. Learn how to track your intake and output.',
+            illustration: 'https://example.com/calorie.jpg'
+          }
+        ]
+      },
+      {
+        id: 'lw1-t2',
+        title: 'Healthy Food Choices',
+        steps: [
+          {
+            id: 'lw1-s2',
+            title: 'Choosing Whole Foods',
+            content: 'Whole foods are less processed and more filling. Focus on vegetables, fruits, lean proteins, and whole grains.',
+            illustration: 'https://images.unsplash.com/photo-1464306076886-debca5e8a6b0'
+          }
+        ]
+      },
+      {
+        id: 'lw1-t3',
+        title: 'Getting Started with Cardio',
+        steps: [
+          {
+            id: 'lw1-s3',
+            title: 'Walking for Fat Loss',
+            content: 'Walking is a simple and effective way to burn calories. Aim for 30 minutes a day.',
+            videoUrl: 'https://youtube.com/embed/walking-fat-loss'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'lw2',
+    goal: 'Lose Weight',
+    title: 'Intermediate Weight Loss Strategies',
+    description: 'Take your fat loss journey to the next level with these strategies.',
+    level: 'Intermediate',
+    coverImage: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c',
+    topics: [
+      {
+        id: 'lw2-t1',
+        title: 'Meal Planning',
+        steps: [
+          {
+            id: 'lw2-s1',
+            title: 'Batch Cooking',
+            content: 'Prepare meals in advance to avoid unhealthy choices.',
+            illustration: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc'
+          }
+        ]
+      },
+      {
+        id: 'lw2-t2',
+        title: 'HIIT Workouts',
+        steps: [
+          {
+            id: 'lw2-s2',
+            title: 'Beginner HIIT Routine',
+            content: 'High-Intensity Interval Training burns more calories in less time.',
+            videoUrl: 'https://youtube.com/embed/hiit-beginner'
+          }
+        ]
+      },
+      {
+        id: 'lw2-t3',
+        title: 'Tracking Progress',
+        steps: [
+          {
+            id: 'lw2-s3',
+            title: 'Using a Journal',
+            content: 'Track your food, workouts, and weight to stay motivated.',
+            illustration: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'lw3',
+    goal: 'Lose Weight',
+    title: 'Advanced Fat Loss Mastery',
+    description: 'Master advanced techniques for sustainable fat loss.',
+    level: 'Advanced',
+    coverImage: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b41',
+    topics: [
+      {
+        id: 'lw3-t1',
+        title: 'Carb Cycling',
+        steps: [
+          {
+            id: 'lw3-s1',
+            title: 'How Carb Cycling Works',
+            content: 'Alternate high and low carb days to optimize fat loss and performance.',
+            illustration: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836'
+          }
+        ]
+      },
+      {
+        id: 'lw3-t2',
+        title: 'Strength Training for Fat Loss',
+        steps: [
+          {
+            id: 'lw3-s2',
+            title: 'Lifting Heavy',
+            content: 'Building muscle increases your metabolism and helps burn more fat.',
+            videoUrl: 'https://youtube.com/embed/strength-fat-loss'
+          }
+        ]
+      },
+      {
+        id: 'lw3-t3',
+        title: 'Overcoming Plateaus',
+        steps: [
+          {
+            id: 'lw3-s3',
+            title: 'Breaking Through Stalls',
+            content: 'Learn strategies to overcome weight loss plateaus and keep progressing.',
+            illustration: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca'
+          }
+        ]
+      }
+    ]
+  },
+  // ...other courses for other goals
+];

@@ -7,6 +7,7 @@ export type RootStackParamList = {
   Home: undefined;
   Login: undefined;
   Profile: undefined;
+  Courses: undefined;
   MealPlanning: undefined;
   Recommendations: undefined;
   ProgressTracking: undefined;
@@ -22,12 +23,15 @@ export type RootStackParamList = {
   RestDetail: {rest: any};
   HealthTipDetail:{tip: any};
   DidYouKnowDetail: { fact: any };
+  CourseDetail: { course: any };
+  TopicDetail: { topic: any };
 };
 
 export type TabParamList = {
   Home: undefined;
   Tracking: undefined;
   Profile: undefined;
+  Courses: undefined;
   Social: undefined;
   Settings: undefined;
 };

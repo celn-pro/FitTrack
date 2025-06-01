@@ -28,6 +28,10 @@ import HydrationDetailScreen from '../screens/HydrationDetailScreen';
 import RestDetailScreen from '../screens/RestDetailScreen';
 import HealthTipDetailScreen from '../screens/HealthTipDetailScreen';
 import DidYouKnowDetailScreen from '../screens/DidYouKnowDetailScreen';
+import CoursesScreen from '../screens/CoursesScreen';
+import CourseDetailScreen from '../screens/CourseDetailScreen';
+import TopicDetailScreen from '../screens/TopicDetailScreen';
+
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -41,6 +45,7 @@ const MainTabs: React.FC = () => {
           let iconName: string = 'home';
           if (route.name === 'Home') iconName = 'home';
           else if (route.name === 'Tracking') iconName = 'fitness-center';
+          else if( route.name === 'Courses') iconName = 'school';
           else if (route.name === 'Profile') iconName = 'person';
           else if (route.name === 'Social') iconName = 'group';
           else if (route.name === 'Settings') iconName = 'settings';
@@ -56,6 +61,7 @@ const MainTabs: React.FC = () => {
   >
     <Tab.Screen name="Home" component={Home} options={{ headerShown: false }} />
     <Tab.Screen name="Tracking" component={ActivityTracking} options={{ headerShown: false }} />
+    <Tab.Screen name="Courses" component={CoursesScreen} options={{ headerShown: false }} />
     <Tab.Screen name="Profile" component={Profile} options={{ headerShown: false }} />
     <Tab.Screen name="Social" component={SocialFeed} options={{ headerShown: false }} />
     <Tab.Screen name="Settings" component={Settings} options={{ headerShown: false }} />
@@ -92,6 +98,9 @@ const AppNavigator: React.FC = () => {
           <Stack.Screen name="RestDetail" component={RestDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="HealthTipDetail" component={HealthTipDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="DidYouKnowDetail" component={DidYouKnowDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Courses" component={CoursesScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CourseDetail" component={CourseDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="TopicDetail" component={TopicDetailScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
     </ThemeProvider>

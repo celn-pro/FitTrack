@@ -50,6 +50,8 @@
     "react-native-toast-message": "^2.3.0",
     "react-native-touch-id": "^4.4.1",
     "react-native-vector-icons": "^10.2.0",
+    "react-native-webview": "^13.14.0",
+    "react-native-youtube-iframe": "^2.3.0",
     "socket.io-client": "^4.8.1",
     "styled-components": "^6.1.18",
     "zustand": "^5.0.3"

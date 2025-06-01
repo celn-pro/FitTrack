@@ -11,6 +11,7 @@ export const lightTheme = {
     secondary: COLORS.secondary,
     accent: COLORS.accent,
     white: COLORS.white,
+    card: COLORS.cardLight,      // Add this line
   },
   typography: TYPOGRAPHY,
 };
@@ -24,6 +25,7 @@ export const darkTheme = {
     secondary: COLORS.secondary,
     accent: COLORS.accent,
     white: COLORS.white,
+    card: COLORS.cardDark,       // Add this line
   },
   typography: TYPOGRAPHY,
 };

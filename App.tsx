@@ -3,25 +3,14 @@ import { StatusBar, useColorScheme } from 'react-native';
 import { ThemeProvider } from 'styled-components/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ApolloProvider } from '@apollo/client';
-import { useThemeStore } from './src/store/themeStore';
 import { lightTheme, darkTheme } from './src/styles/theme';
 import AppNavigator from './src/navigation/AppNavigator';
 import { apolloClient } from './src/config/apolloClient'; // You'll need to create this
 
+import { useTheme } from './src/hooks/useTheme'; // Import your custom hook
+
 const App: React.FC = () => {
-  // Detect system theme
-  const systemTheme = useColorScheme();
-
-  // Get theme state from Zustand store
-  const { theme: userTheme } = useThemeStore();
-
-  // Determine the active theme
-  let activeTheme;
-  if (userTheme === 'system') {
-    activeTheme = systemTheme === 'dark' ? darkTheme : lightTheme;
-  } else {
-    activeTheme = userTheme === 'dark' ? darkTheme : lightTheme;
-  }
+  const { theme: activeTheme } = useTheme(); // This hook listens for system changes
 
   return (
     <ApolloProvider client={apolloClient}>

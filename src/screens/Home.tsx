@@ -38,50 +38,6 @@ interface Recommendation {
   frequency: string;
 }
 
-// Combine and map to Recommendation type
-const combinedRecommendations: Recommendation[] = [
-  ...WORKOUTS.slice(0, 1).map(item => ({
-    id: item.id,
-    title: item.title,
-    description: item.description,
-    type: 'workout',
-    category: 'workout',
-    priority: 1,
-    media: item.coverImage,
-    frequency: 'daily',
-  })),
-  ...NUTRITION_RECOMMENDATIONS.slice(0, 1).map(item => ({
-    id: item.id,
-    title: item.title,
-    description: item.description,
-    type: 'nutrition',
-    category: 'nutrition',
-    priority: 1,
-    media: item.image,
-    frequency: 'daily',
-  })),
-  ...HYDRATION_RECOMMENDATIONS.slice(0, 1).map(item => ({
-    id: item.id,
-    title: item.title,
-    description: item.description,
-    type: 'hydration',
-    category: 'hydration',
-    priority: 1,
-    media: item.image,
-    frequency: 'daily',
-  })),
-  ...REST_RECOMMENDATIONS.slice(0, 1).map(item => ({
-    id: item.id,
-    title: item.title,
-    description: item.description,
-    type: 'rest',
-    category: 'rest',
-    priority: 1,
-    media: item.image,
-    frequency: 'daily',
-  })),
-];
-
 interface HealthTip {
   id: string;
   title: string;
@@ -198,27 +154,7 @@ const Home: React.FC = () => {
   }, []);
 
   // GraphQL queries (keeping your existing logic)
-  const { data, loading, error, refetch } = useQuery(GET_RECOMMENDATIONS, {
-    variables: { email },
-    skip: !email || !isAuthenticated,
-    fetchPolicy: 'cache-and-network',
-    onCompleted: async (data) => {
-      if (data.getRecommendations) {
-        await AsyncStorage.setItem('recommendations', JSON.stringify(data.getRecommendations));
-      }
-    },
-    onError: async (error) => {
-      console.error('GraphQL query error:', error);
-      try {
-        const cached = await AsyncStorage.getItem('recommendations');
-        if (cached) {
-          setRecommendations(JSON.parse(cached));
-        }
-      } catch (cacheError) {
-        console.error('Error loading cached data:', cacheError);
-      }
-    },
-  });
+  const { loading, error, data, refetch } = useQuery(GET_RECOMMENDATIONS);
 
   useSubscription(ON_RECOMMENDATION_UPDATE, {
     variables: { email },
@@ -237,19 +173,19 @@ const Home: React.FC = () => {
     }
   }, [data]);
 
-  useEffect(() => {
-    const loadCached = async () => {
-      try {
-        const cached = await AsyncStorage.getItem('recommendations');
-        if (cached) {
-          setRecommendations(JSON.parse(cached));
-        }
-      } catch (error) {
-        console.error('Error loading cached recommendations:', error);
-      }
-    };
-    loadCached();
-  }, []);
+  // useEffect(() => {
+  //   const loadCached = async () => {
+  //     try {
+  //       const cached = await AsyncStorage.getItem('recommendations');
+  //       if (cached) {
+  //         setRecommendations(JSON.parse(cached));
+  //       }
+  //     } catch (error) {
+  //       console.error('Error loading cached recommendations:', error);
+  //     }
+  //   };
+  //   loadCached();
+  // }, []);
 
   useEffect(() => {
     if (showMoodSuggestions) {
@@ -257,6 +193,21 @@ const Home: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [showMoodSuggestions]);
+
+  useEffect(() => {
+  const loadTodayMood = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const moodHistoryRaw = await AsyncStorage.getItem('moodHistory');
+    if (moodHistoryRaw) {
+      const moodHistory = JSON.parse(moodHistoryRaw);
+      const todayEntry = moodHistory.find((entry: any) => entry.date === today);
+      if (todayEntry) {
+        setSelectedMood(todayEntry.mood);
+      }
+    }
+  };
+  loadTodayMood();
+}, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -274,17 +225,22 @@ const Home: React.FC = () => {
   };
 
   const handleMoodSelection = async (mood: string) => {
-    setSelectedMood(mood);
-    setShowMoodModal(false);
-    setShowMoodSuggestions(true);
+  setSelectedMood(mood);
+  setShowMoodModal(false);
+  setShowMoodSuggestions(true);
 
-    // --- Store mood history ---
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const moodHistoryRaw = await AsyncStorage.getItem('moodHistory');
-    const moodHistory = moodHistoryRaw ? JSON.parse(moodHistoryRaw) : [];
-    moodHistory.push({ date: today, mood });
-    await AsyncStorage.setItem('moodHistory', JSON.stringify(moodHistory));
-  };
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const moodHistoryRaw = await AsyncStorage.getItem('moodHistory');
+  let moodHistory = moodHistoryRaw ? JSON.parse(moodHistoryRaw) : [];
+
+  // Remove any existing mood for today
+  moodHistory = moodHistory.filter((entry: any) => entry.date !== today);
+
+  // Add the new mood for today
+  moodHistory.push({ date: today, mood });
+
+  await AsyncStorage.setItem('moodHistory', JSON.stringify(moodHistory));
+};
 
   const getMoodSuggestion = (mood: string) => {
     const suggestions = {
@@ -296,6 +252,19 @@ const Home: React.FC = () => {
     };
     return suggestions[mood as keyof typeof suggestions] || "Take care of yourself today.";
   };
+
+  const getGoalSubtitle = () => {
+  switch (user?.fitnessGoal) {
+    case 'Lose Weight':
+      return "Let's burn those calories and reach your weight loss goal!";
+    case 'Gain Muscle':
+      return "Time to build strength and muscle—let's get stronger!";
+    case 'Maintain Health':
+      return "Keep up the healthy habits and maintain your best self!";
+    default:
+      return "Ready to crush your goals today?";
+  }
+};
 
  const renderCompactRecommendation = ({ item }: { item: any }) => (
     <TouchableOpacity
@@ -337,7 +306,9 @@ const Home: React.FC = () => {
           alignSelf: 'center'
         }} />
         <View style={{ flex: 1 }}>
-          <CategoryBadge category={item.category}>{item.category.toUpperCase()}</CategoryBadge>
+          <CategoryBadge category={item.category || 'other'}>
+            {(item.category || 'Other').toUpperCase()}
+          </CategoryBadge>
           <Text style={[styles.compactTitle, { color: theme.colors.text }]} numberOfLines={2}>
             {item.title}
           </Text>
@@ -409,7 +380,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
           <HeaderContent>
             <View>
               <HeaderTitle>Welcome Back, {user.name || 'User'}!</HeaderTitle>
-              <HeaderSubtitle>Ready to crush your goals today?</HeaderSubtitle>
+              <HeaderSubtitle>{getGoalSubtitle()}</HeaderSubtitle>
               <TouchableOpacity onPress={handleMoodClick}>
                 <MoodPromptContainer>
                   <MoodPromptText>How are you feeling today?</MoodPromptText>
@@ -520,7 +491,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
               </LoadingContainer>
             ) : recommendations.length > 0 ? (
             <FlatList
-              data={combinedRecommendations.slice(0,2)}
+              data={recommendations.slice(0,2)}
               renderItem={renderCompactRecommendation}
               keyExtractor={item => item.id}
               showsVerticalScrollIndicator={false}
@@ -649,7 +620,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
             </TouchableOpacity>
           </ModalHeader>
           <ModalContent>
-            {combinedRecommendations.map((item) => (
+            {recommendations.map((item) => (
               <TouchableOpacity
                 key={item.id}
                 style={{ marginBottom: 12 }}

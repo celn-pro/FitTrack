@@ -213,7 +213,9 @@ const LOGIN_USER = gql`
     loginUser(email: $email, password: $password) {
       user {
         id
+        name
         email
+        fitnessGoal
         isProfileComplete
       }
       token
