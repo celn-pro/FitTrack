@@ -49,3 +49,60 @@ export const ON_RECOMMENDATION_UPDATE = gql`
     }
   }
 `;
+
+export const GET_HEALTH_TIPS = gql`
+  query GetHealthTips {
+    getHealthTips {
+      id
+      title
+      description
+      category
+      icon
+      image
+      link
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const GET_DID_YOU_KNOW = gql`
+  query GetDidYouKnow {
+    getDidYouKnow {
+      id
+      fact
+      source
+      image
+      link
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const GET_COURSES = gql`
+  query GetCourses {
+    getCourses {
+      id
+      goal
+      title
+      description
+      level
+      coverImage
+      topics {
+        id
+        title
+        description
+        steps {
+          id
+          title
+          content
+          illustration
+          videoUrl
+        }
+      }
+      createdAt
+      updatedAt
+    }
+  }
+`;

@@ -1,43 +1,24 @@
-// src/store/themeStore.ts
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance } from 'react-native';
 
-type ThemeState = {
-  theme: 'light' | 'dark' | 'system';
+type ThemeType = 'light' | 'dark';
+
+interface ThemeStore {
+  theme: ThemeType;
   toggleTheme: () => void;
-  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  setTheme: (theme: ThemeType) => void;
+}
+
+const getInitialTheme = (): ThemeType => {
+  const colorScheme = Appearance.getColorScheme();
+  return colorScheme === 'dark' ? 'dark' : 'light';
 };
 
-export const useThemeStore = create<ThemeState>()(
-  persist(
-    (set) => ({
-      theme: 'system', // Default to system theme
-      toggleTheme: () =>
-        set((state) => ({
-          theme:
-            state.theme === 'light'
-              ? 'dark'
-              : state.theme === 'dark'
-              ? 'system'
-              : 'light',
-        })),
-      setTheme: (theme) => set({ theme }),
-    }),
-    {
-      name: 'theme-storage',
-      storage: {
-        getItem: async (name) => {
-          const value = await AsyncStorage.getItem(name);
-          return value ? JSON.parse(value) : null;
-        },
-        setItem: async (name, value) => {
-          await AsyncStorage.setItem(name, JSON.stringify(value));
-        },
-        removeItem: async (name) => {
-          await AsyncStorage.removeItem(name);
-        },
-      },
-    }
-  )
-);
+export const useThemeStore = create<ThemeStore>((set, get) => ({
+  theme: getInitialTheme(),
+  toggleTheme: () =>
+    set((state) => ({
+      theme: state.theme === 'light' ? 'dark' : 'light',
+    })),
+  setTheme: (theme) => set({ theme }),
+}));

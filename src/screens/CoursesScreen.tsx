@@ -1,11 +1,12 @@
-import React, { useState, useCallback } from 'react';
-import { FlatList, RefreshControl } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { FlatList, RefreshControl, ActivityIndicator, ScrollView } from 'react-native';
 import styled, { useTheme } from 'styled-components/native';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
-import { COURSES, Course } from '../constants';
 import { RootStackParamList } from '../navigation/types';
 import { useAuthStore } from '../store/authStore';
 import LinearGradient from 'react-native-linear-gradient';
+import { GET_COURSES } from '../graphql/queries';
+import { useQuery } from '@apollo/client';
 
 const levels = ['Beginner', 'Intermediate', 'Advanced'];
 
@@ -15,81 +16,138 @@ const CoursesScreen: React.FC = () => {
   const { user } = useAuthStore();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [filteredCourses, setFilteredCourses] = useState<any[]>([]);
 
-  // Filter courses by user goal
-  const filteredCourses = user
-    ? COURSES.filter((course) => course.goal === user.fitnessGoal)
-    : [];
+  // Always fetch from network on refresh for up-to-date data
+  const { loading, error, data, refetch } = useQuery(GET_COURSES, {
+    fetchPolicy: 'cache-and-network',
+  });
 
-  const onRefresh = useCallback(() => {
+  // Filter courses by user goal when data or user changes
+  useEffect(() => {
+    if (user && data?.getCourses) {
+      setFilteredCourses(
+        data.getCourses.filter((course: any) => course.goal === user.fitnessGoal)
+      );
+    } else {
+      setFilteredCourses([]);
+    }
+  }, [data, user]);
+
+  // Pull to refresh handler
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Simulate refresh (replace with real fetch if needed)
-    setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
+
+  // Loading state
+  if (loading && !refreshing) {
+    return (
+      <Container>
+        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
+      </Container>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Container>
+        <EmptyText>Error loading courses.</EmptyText>
+        <ScrollView
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
+        />
+      </Container>
+    );
+  }
 
   return (
     <Container>
-     <LinearGradient
-  colors={[theme.colors.primary, theme.colors.secondary]}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 1, y: 1 }}
-  style={{
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    margin: 18,
-    marginBottom: 8,
-    padding: 18,
-    paddingBottom: 14,
-    elevation: 2,
-  }}
->
-  <MotivationTitle style={{ color: theme.colors.white }}>
-    Learn at Your Own Pace
-  </MotivationTitle>
-  <MotivationText style={{ color: 'rgba(255,255,255,0.85)' }}>
-    Our courses are designed to fit your lifestyle. Take each lesson when you're ready—no rush, no pressure. Progress is progress!
-  </MotivationText>
-</LinearGradient>
-      <FlatList
-        data={levels}
-        keyExtractor={(level) => level}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.colors.primary]}
-            tintColor={theme.colors.primary}
-          />
-        }
-        renderItem={({ item: level }) => {
-          const courses = filteredCourses.filter((c) => c.level === level);
-          if (!courses.length) return null;
-          return (
-            <LevelSection>
-              <LevelTitle>{level}</LevelTitle>
-              {courses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  activeOpacity={0.85}
-                  onPress={() => navigation.navigate('CourseDetail', { course })}
-                >
-                  {course.coverImage && (
-                    <CourseImage source={{ uri: course.coverImage }} />
-                  )}
-                  <CourseInfo>
-                    <CourseTitle>{course.title}</CourseTitle>
-                    <CourseDesc numberOfLines={2}>{course.description}</CourseDesc>
-                  </CourseInfo>
-                </CourseCard>
-              ))}
-            </LevelSection>
-          );
+      <LinearGradient
+        colors={[theme.colors.primary, theme.colors.secondary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          borderBottomLeftRadius: 20,
+          borderBottomRightRadius: 20,
+          margin: 18,
+          marginBottom: 8,
+          padding: 18,
+          paddingBottom: 14,
+          elevation: 2,
         }}
-        ListEmptyComponent={
+      >
+        <MotivationTitle style={{ color: theme.colors.white }}>
+          Learn at Your Own Pace
+        </MotivationTitle>
+        <MotivationText style={{ color: 'rgba(255,255,255,0.85)' }}>
+          Our courses are designed to fit your lifestyle. Take each lesson when you're ready—no rush, no pressure. Progress is progress!
+        </MotivationText>
+      </LinearGradient>
+      {filteredCourses.length === 0 ? (
+        <ScrollView
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
+          contentContainerStyle={{ flex: 1, justifyContent: 'center' }}
+        >
           <EmptyText>No courses for your goal yet.</EmptyText>
-        }
-        contentContainerStyle={{ paddingBottom: 40 }}
-      />
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={levels}
+          keyExtractor={(level) => level}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
+          renderItem={({ item: level }) => {
+            const courses = filteredCourses.filter((c: any) => c.level === level);
+            if (!courses.length) return null;
+            return (
+              <LevelSection>
+                <LevelTitle>{level}</LevelTitle>
+                {courses.map((course: any) => (
+                  <CourseCard
+                    key={course.id}
+                    activeOpacity={0.85}
+                    onPress={() => navigation.navigate('CourseDetail', { course })}
+                  >
+                    {course.coverImage && (
+                      <CourseImage source={{ uri: course.coverImage }} />
+                    )}
+                    <CourseInfo>
+                      <CourseTitle>{course.title}</CourseTitle>
+                      <CourseDesc numberOfLines={2}>{course.description}</CourseDesc>
+                    </CourseInfo>
+                  </CourseCard>
+                ))}
+              </LevelSection>
+            );
+          }}
+          contentContainerStyle={{ paddingBottom: 40 }}
+        />
+      )}
     </Container>
   );
 };
@@ -97,18 +155,6 @@ const CoursesScreen: React.FC = () => {
 const Container = styled.View`
   flex: 1;
   background-color: ${({ theme }) => theme.colors.background};
-`;
-
-const MotivationBox = styled.View`
-  background-color: ${({ theme }) => theme.colors.card || '#f6f8fa'};
-  border-radius: 16px;
-  margin: 18px 18px 8px 18px;
-  padding: 18px 16px 14px 16px;
-  elevation: 2;
-  shadow-color: #000;
-  shadow-opacity: 0.06;
-  shadow-radius: 8px;
-  shadow-offset: 0px 2px;
 `;
 
 const MotivationTitle = styled.Text`

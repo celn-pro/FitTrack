@@ -15,8 +15,9 @@ import {
 import { useQuery, useSubscription } from '@apollo/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FastImage from 'react-native-fast-image';
-import styled, { ThemeProvider, useTheme } from 'styled-components/native';
-import { GET_RECOMMENDATIONS, ON_RECOMMENDATION_UPDATE } from '../graphql/queries';
+import styled, { ThemeProvider } from 'styled-components/native';
+import { useTheme } from '../hooks/useTheme'; // or the correct path to your custom hook
+import { GET_RECOMMENDATIONS, ON_RECOMMENDATION_UPDATE, GET_HEALTH_TIPS, GET_DID_YOU_KNOW } from '../graphql/queries';
 import { useAuthStore } from '../store/authStore';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -24,6 +25,7 @@ import { COLORS } from '../styles/colors';
 import { DID_YOU_KNOW, HEALTH_TIPS, HYDRATION_RECOMMENDATIONS, HydrationRecommendation, NUTRITION_RECOMMENDATIONS, NutritionRecommendation, REST_RECOMMENDATIONS, RestRecommendation, WORKOUTS, Workout } from '../constants';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
+import { getHealthTipIcon } from '../utils/getHealthTipIcon';
 
 const { width } = Dimensions.get('window');
 
@@ -57,12 +59,16 @@ const MOODS = [
 const CARD_MARGIN = 10;
 
 const Home: React.FC = () => {
-  const theme = useTheme();
+  // const theme = useTheme();
+const { theme, toggleTheme, isDark, themeName } = useTheme();
+
   const { user, isAuthenticated, token } = useAuthStore();
   const email = user?.email || '';
 
   const [refreshing, setRefreshing] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [healthTips, setHealthTips] = useState<HealthTip[]>([])
+  const [didYouKnow, setDidYouKnow] = useState<any[]>([]);
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const [currentDidYouKnowIndex, setCurrentDidYouKnowIndex] = useState(0);
@@ -70,7 +76,6 @@ const Home: React.FC = () => {
   const [lastLoginDate, setLastLoginDate] = useState<string | null>(null);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [showMoodSuggestions, setShowMoodSuggestions] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [showAllRecommendations, setShowAllRecommendations] = useState(false);
   const [showAllHealthTips, setShowAllHealthTips] = useState(false);
@@ -83,41 +88,49 @@ const Home: React.FC = () => {
   const tipScrollRef = useRef<ScrollView>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  const combinedRecommendations = [
-    ...WORKOUTS.slice(0, 1),
-    ...NUTRITION_RECOMMENDATIONS.slice(0, 1),
-    ...HYDRATION_RECOMMENDATIONS.slice(0, 1),
-    ...REST_RECOMMENDATIONS.slice(0, 1),
-  ];
+  // For testing purposes, you can uncomment the following lines to use a smaller set of recommendations
+  // const combinedRecommendations = [
+  //   ...WORKOUTS.slice(0, 1),
+  //   ...NUTRITION_RECOMMENDATIONS.slice(0, 1),
+  //   ...HYDRATION_RECOMMENDATIONS.slice(0, 1),
+  //   ...REST_RECOMMENDATIONS.slice(0, 1),
+  // ];
+
+  // Helper to get today's date string
+  const getToday = () => new Date().toISOString().split('T')[0];
+
 
   // Auto-scroll health tips
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTipIndex((prev) => (prev + 1) % HEALTH_TIPS.length);
+      setCurrentTipIndex((prev) => (prev + 1) % healthTips.length);
     }, 4000);
     return () => clearInterval(interval);
   }, []);
 
   // Auto-rotate did you know facts
   useEffect(() => {
-    const interval = setInterval(() => {
-      Animated.sequence([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-      
-      setCurrentDidYouKnowIndex((prev) => (prev + 1) % DID_YOU_KNOW.length);
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [fadeAnim]);
+  if (didYouKnow.length === 0) return; // Don't run interval if no facts
+
+  const interval = setInterval(() => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    setCurrentDidYouKnowIndex((prev) => (prev + 1) % didYouKnow.length);
+  }, 15000);
+
+  return () => clearInterval(interval);
+}, [fadeAnim, didYouKnow.length]);
 
   // Login streak management
   useEffect(() => {
@@ -153,8 +166,14 @@ const Home: React.FC = () => {
     updateStreak();
   }, []);
 
-  // GraphQL queries (keeping your existing logic)
-  const { loading, error, data, refetch } = useQuery(GET_RECOMMENDATIONS);
+  // Fetch recommendations
+  const { loading: loadingRecs, error: errorRecs, data: dataRecs, refetch: refetchRecs } = useQuery(GET_RECOMMENDATIONS);
+
+  // Fetch health tips
+  const { loading: loadingTips, error: errorTips, data: dataTips, refetch: refetchTips } = useQuery(GET_HEALTH_TIPS);
+
+  const { loading: loadingDidYouKnow, error: errorDidYouKnow, data: dataDidYouKnow, refetch: refetchDidYouKnow } = useQuery(GET_DID_YOU_KNOW);
+
 
   useSubscription(ON_RECOMMENDATION_UPDATE, {
     variables: { email },
@@ -167,25 +186,78 @@ const Home: React.FC = () => {
     },
   });
 
+ // Load recommendations from cache or backend
   useEffect(() => {
-    if (data?.getRecommendations) {
-      setRecommendations(data.getRecommendations);
-    }
-  }, [data]);
+    const loadRecommendations = async () => {
+      const today = getToday();
+      const cached = await AsyncStorage.getItem('recommendations');
+      const cachedDate = await AsyncStorage.getItem('recommendationsDate');
 
-  // useEffect(() => {
-  //   const loadCached = async () => {
-  //     try {
-  //       const cached = await AsyncStorage.getItem('recommendations');
-  //       if (cached) {
-  //         setRecommendations(JSON.parse(cached));
-  //       }
-  //     } catch (error) {
-  //       console.error('Error loading cached recommendations:', error);
-  //     }
-  //   };
-  //   loadCached();
-  // }, []);
+      if (cached && cachedDate === today) {
+        setRecommendations(JSON.parse(cached));
+      } else {
+        // Fetch from backend
+        try {
+          const { data } = await refetchRecs();
+          if (data?.getRecommendations) {
+            setRecommendations(data.getRecommendations);
+            await AsyncStorage.setItem('recommendations', JSON.stringify(data.getRecommendations));
+            await AsyncStorage.setItem('recommendationsDate', today);
+          }
+        } catch (error) {
+          console.error('Error fetching recommendations:', error);
+        }
+      }
+    };
+
+    const loadHealthTips = async () => {
+    const today = getToday();
+    const cached = await AsyncStorage.getItem('healthTips');
+    const cachedDate = await AsyncStorage.getItem('healthTipsDate');
+
+    if (cached && cachedDate === today) {
+      setHealthTips(JSON.parse(cached));
+    } else {
+      try {
+        const { data } = await refetchTips();
+        if (data?.getHealthTips) {
+          setHealthTips(data.getHealthTips);
+          await AsyncStorage.setItem('healthTips', JSON.stringify(data.getHealthTips));
+          await AsyncStorage.setItem('healthTipsDate', today);
+        }
+      } catch (error) {
+        console.error('Error fetching health tips:', error);
+      }
+    }
+    };
+
+    const loadDidYouKnow = async () => {
+    const today = getToday();
+    const cached = await AsyncStorage.getItem('didYouKnow');
+    const cachedDate = await AsyncStorage.getItem('didYouKnowDate');
+
+    if (cached && cachedDate === today) {
+      setDidYouKnow(JSON.parse(cached));
+      } else {
+        try {
+          const { data } = await refetchDidYouKnow();
+          if (data?.getDidYouKnow) {
+          setDidYouKnow(data.getDidYouKnow);
+          setCurrentDidYouKnowIndex(0); // Reset index!
+          await AsyncStorage.setItem('didYouKnow', JSON.stringify(data.getDidYouKnow));
+          await AsyncStorage.setItem('didYouKnowDate', today);
+}
+        } catch (error) {
+          console.error('Error fetching did you know:', error);
+        }
+      }
+    };
+
+    loadRecommendations();
+    loadHealthTips();
+    loadDidYouKnow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (showMoodSuggestions) {
@@ -209,16 +281,36 @@ const Home: React.FC = () => {
   loadTodayMood();
 }, []);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await refetch();
-    } catch (error) {
-      console.error('Error refreshing:', error);
-    } finally {
-      setRefreshing(false);
+ const onRefresh = async () => {
+  setRefreshing(true);
+  try {
+    // Recommendations
+    const { data: recData } = await refetchRecs();
+    if (recData?.getRecommendations) {
+      setRecommendations(recData.getRecommendations);
+      await AsyncStorage.setItem('recommendations', JSON.stringify(recData.getRecommendations));
+      await AsyncStorage.setItem('recommendationsDate', getToday());
     }
-  };
+    // Health Tips
+    const { data: tipsData } = await refetchTips();
+    if (tipsData?.getHealthTips) {
+      setHealthTips(tipsData.getHealthTips);
+      await AsyncStorage.setItem('healthTips', JSON.stringify(tipsData.getHealthTips));
+      await AsyncStorage.setItem('healthTipsDate', getToday());
+    }
+    // Did You Know
+    const { data: didYouKnowData } = await refetchDidYouKnow();
+    if (didYouKnowData?.getDidYouKnow) {
+      setDidYouKnow(didYouKnowData.getDidYouKnow);
+      await AsyncStorage.setItem('didYouKnow', JSON.stringify(didYouKnowData.getDidYouKnow));
+      await AsyncStorage.setItem('didYouKnowDate', getToday());
+    }
+  } catch (error) {
+    console.error('Error refreshing:', error);
+  } finally {
+    setRefreshing(false);
+  }
+};
 
   const handleMoodClick = () => {
     setShowMoodModal(true);
@@ -339,7 +431,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
       style={styles.healthTipGradient}
     >
       <HealthTipCard>
-        <Icon name={item.icon} size={20} color={theme.colors.primary} />
+        <Icon name={getHealthTipIcon(item.category, item.title)} size={20} color={theme.colors.primary} />
         <HealthTipContent>
           <HealthTipTitle>{item.title}</HealthTipTitle>
           <HealthTipDescription>{item.description}</HealthTipDescription>
@@ -389,15 +481,15 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
               </TouchableOpacity>
             </View>
             <TouchableOpacity 
-              onPress={() => setIsDarkMode(!isDarkMode)}
-              style={styles.themeToggle}
-            >
-              <Icon 
-                name={isDarkMode ? 'light-mode' : 'dark-mode'} 
-                size={24} 
-                color={theme.colors.white} 
-              />
-            </TouchableOpacity>
+  onPress={toggleTheme}
+  style={styles.themeToggle}
+>
+  <Icon 
+    name={isDark ? 'dark-mode' : 'light-mode'}
+    size={24}
+    color={theme.colors.white}
+  />
+</TouchableOpacity>
           </HeaderContent>
           
           {/* Streak Counter */}
@@ -422,7 +514,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
           <FlatList
             horizontal
             showsHorizontalScrollIndicator={false}
-            data={HEALTH_TIPS}
+            data={healthTips}
             renderItem={renderHealthTip}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.healthTipsList}
@@ -435,7 +527,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
         <SectionContainer>
           <SectionTitle>Did You Know?</SectionTitle>
           <TouchableOpacity 
-            onPress={() => navigation.navigate('DidYouKnowDetail', { fact: DID_YOU_KNOW[currentDidYouKnowIndex] })}
+            onPress={() => navigation.navigate('DidYouKnowDetail', { fact: didYouKnow[currentDidYouKnowIndex] })}
           >
             <LinearGradient
               colors={theme.colors.background === COLORS.darkBackground 
@@ -455,22 +547,31 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
                 }} />
                 <View style={[styles.didYouKnowContent, { padding: 15 }]}>
                   <Icon name="psychology" size={20} color={theme.colors.accent} />
-                  <Text
-                    style={[
-                      styles.didYouKnowFact,
+                 {didYouKnow.length > 0 && didYouKnow[currentDidYouKnowIndex] ? (
+                    <>
+                      <Text
+                        style={[
+                          styles.didYouKnowFact,
+                          { color: theme.colors.text }
+                        ]}
+                      >
+                        {didYouKnow[currentDidYouKnowIndex].fact}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.didYouKnowSource,
+                          { color: theme.colors.secondaryText }
+                        ]}
+                      >
+                        Source: {didYouKnow[currentDidYouKnowIndex].source}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={[styles.didYouKnowFact,
                       { color: theme.colors.text }
                     ]}
-                  >
-                    {DID_YOU_KNOW[currentDidYouKnowIndex].fact}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.didYouKnowSource,
-                      { color: theme.colors.secondaryText }
-                    ]}
-                  >
-                    Source: {DID_YOU_KNOW[currentDidYouKnowIndex].source}
-                  </Text>
+                    >No facts available today.</Text>
+                  )}
                 </View>
               </Animated.View>
             </LinearGradient>
@@ -485,7 +586,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
               <Text style={styles.seeAllText}>View All</Text>
             </TouchableOpacity>
           </SectionHeader>
-            {loading && !refreshing ? (
+            {loadingRecs && !refreshing ? (
               <LoadingContainer>
                 <Text style={styles.loadingText}>Loading recommendations...</Text>
               </LoadingContainer>
@@ -576,7 +677,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
             </TouchableOpacity>
           </ModalHeader>
           <ModalContent>
-            {HEALTH_TIPS.map((tip) => (
+            {healthTips.map((tip) => (
               <TouchableOpacity
                 key={tip.id}
                 onPress={() => {

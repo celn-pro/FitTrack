@@ -10,6 +10,8 @@ import { HapticButton } from '../../components/HapticButton';
 import { useThemeStore } from '../../store/themeStore';
 import { RootStackParamList } from '../../navigation/types';
 import LinearGradient from 'react-native-linear-gradient';
+import { useAuthStore, authUtils } from '../../store/authStore'; // <-- import auth store and utils
+
 
 type WelcomeNavigationProp = StackNavigationProp<RootStackParamList, 'OnboardingWelcome'>;
 
@@ -85,6 +87,22 @@ const Welcome: React.FC = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(100)).current;
   const buttonScale = useRef(new Animated.Value(1)).current;
+
+   // Auth state
+  const { isAuthenticated, user, token } = useAuthStore();
+
+  // Check auth and auto-navigate if valid
+  useEffect(() => {
+    // You can add a real token expiry check here if you store expiry
+    if (isAuthenticated && user && token) {
+      // If you want to check profile completion:
+      if (user.isProfileComplete) {
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      } else {
+        navigation.reset({ index: 0, routes: [{ name: 'OnboardingProfileSetup' }] });
+      }
+    }
+  }, [isAuthenticated, user, token, navigation]);
 
   useEffect(() => {
     Animated.parallel([
