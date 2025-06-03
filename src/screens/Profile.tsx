@@ -7,6 +7,7 @@ import { useAuthStore, authUtils } from '../store/authStore';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { COLORS } from '../styles/colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 type RootStackParamList = {
   Login: undefined;
   // add other routes here if needed
@@ -17,20 +18,37 @@ const Profile: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { user, logout } = useAuthStore();
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Log Out',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Log Out', style: 'destructive', onPress: () => {
-            logout();
-            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-          }
-        },
-      ]
-    );
-  };
+ 
+const handleLogout = async () => {
+  Alert.alert(
+    'Log Out',
+    'Are you sure you want to log out?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'Log Out', 
+        style: 'destructive', 
+        onPress: async () => {
+          // Clear all cached data
+          await AsyncStorage.multiRemove([
+            'recommendations',
+            'recommendationsDate',
+            'healthTips',
+            'healthTipsDate',
+            'didYouKnow',
+            'didYouKnowDate',
+            'moodHistory',
+            'lastLoginDate',
+            'loginStreak',
+            'streakHistory'
+          ]);
+          logout();
+          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+        }
+      },
+    ]
+  );
+};
 
   if (!user) {
     return (

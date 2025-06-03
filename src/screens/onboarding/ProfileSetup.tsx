@@ -1,44 +1,439 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { TextInput, Alert, Animated, TouchableOpacity, RefreshControl, Dimensions, View, Text } from 'react-native';
+import { Alert, Animated, TouchableOpacity, Dimensions, View } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView } from 'react-native';
-import { useMutation } from '@apollo/client';
-import { gql } from '@apollo/client';
-import { RootStackParamList } from '../../navigation/types';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import styled, { useTheme } from 'styled-components/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useMutation, gql } from '@apollo/client';
 import { useAuthStore } from '../../store/authStore';
+import { RootStackParamList } from '../../navigation/types';
 
 type ProfileSetupNavigationProp = StackNavigationProp<RootStackParamList, 'OnboardingProfileSetup'>;
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+const steps = [
+  'Basic Info',
+  'Goals & Preferences',
+  'Health & Finish'
+];
+
+const COMPLETE_PROFILE = gql`
+  mutation CompleteProfile(
+    $name: String!
+    $age: Int!
+    $weight: Float!
+    $height: Float!
+    $gender: String!
+    $fitnessGoal: String!
+    $dietaryPreference: String!
+    $healthConditions: [String!]!
+    $activityLevel: String!
+    $preferredWorkoutTypes: [String!]!
+    $dietaryRestrictions: [String!]!
+  ) {
+    completeProfile(
+      name: $name
+      age: $age
+      weight: $weight
+      height: $height
+      gender: $gender
+      fitnessGoal: $fitnessGoal
+      dietaryPreference: $dietaryPreference
+      healthConditions: $healthConditions
+      activityLevel: $activityLevel
+      preferredWorkoutTypes: $preferredWorkoutTypes
+      dietaryRestrictions: $dietaryRestrictions
+    ) {
+      id
+      name
+      email
+      isProfileComplete
+    }
+  }
+`;
+
+const ProfileSetup: React.FC = () => {
+  const navigation = useNavigation<ProfileSetupNavigationProp>();
+  const theme = useTheme();
+  const { setUser } = useAuthStore();
+
+  // Multi-step state
+  const [step, setStep] = useState(0);
+
+  // Form state
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [weight, setWeight] = useState('');
+  const [height, setHeight] = useState('');
+  const [gender, setGender] = useState('');
+  const [fitnessGoal, setFitnessGoal] = useState('Lose Weight');
+  const [dietaryPreference, setDietaryPreference] = useState('None');
+  const [healthConditions, setHealthConditions] = useState<string[]>([]);
+  const [activityLevel, setActivityLevel] = useState('');
+  const [preferredWorkoutTypes, setPreferredWorkoutTypes] = useState<string[]>([]);
+  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
+
+  // Error state
+  const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
+
+  const [completeProfile, { loading }] = useMutation(COMPLETE_PROFILE, {
+    onCompleted: (data) => {
+      setUser(data.completeProfile);
+      Alert.alert(
+        'Profile Complete!',
+        'Welcome to FitTrack! Your fitness journey starts now.',
+        [{ text: 'Let\'s Go!', onPress: () => navigation.navigate('Home') }]
+      );
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to complete profile. Please try again.');
+    },
+  });
+
+  // Validation per step
+  const validateStep = () => {
+    let stepErrors: { [key: string]: string } = {};
+    if (step === 0) {
+      if (!name.trim()) stepErrors.name = 'Name is required';
+      if (!age.trim() || isNaN(Number(age)) || Number(age) < 13 || Number(age) > 120)
+        stepErrors.age = 'Valid age (13-120) required';
+      if (!weight.trim() || isNaN(Number(weight)) || Number(weight) < 20 || Number(weight) > 500)
+        stepErrors.weight = 'Valid weight (20-500 kg) required';
+      if (!height.trim() || isNaN(Number(height)) || Number(height) < 100 || Number(height) > 250)
+        stepErrors.height = 'Valid height (100-250 cm) required';
+      if (!gender) stepErrors.gender = 'Gender is required';
+    }
+    if (step === 1) {
+      if (!fitnessGoal) stepErrors.fitnessGoal = 'Select a goal';
+      if (!activityLevel) stepErrors.activityLevel = 'Select activity level';
+    }
+    setErrors(stepErrors);
+    return Object.keys(stepErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep()) setStep((s) => s + 1);
+  };
+  const handleBack = () => setStep((s) => s - 1);
+
+  const handleSubmit = async () => {
+    if (!validateStep()) return;
+    await completeProfile({
+      variables: {
+        name: name.trim(),
+        age: parseInt(age),
+        weight: parseFloat(weight),
+        height: parseFloat(height),
+        gender,
+        fitnessGoal,
+        dietaryPreference,
+        healthConditions,
+        activityLevel,
+        preferredWorkoutTypes,
+        dietaryRestrictions,
+      },
+    });
+  };
+
+  // Helper to check if all required fields in the last step are filled
+const isLastStepComplete = () => {
+  // You can refine this logic as needed for your required fields
+  return (
+    healthConditions.length > 0 &&
+    dietaryRestrictions.length > 0
+  );
+};
+
+  // Checkbox helpers
+  const toggleCheckbox = (value: string, current: string[], setter: (values: string[]) => void) => {
+    if (current.includes(value)) {
+      setter(current.filter((item) => item !== value));
+    } else {
+      setter([...current, value]);
+    }
+  };
+
+  // Progress bar
+  const renderProgress = () => (
+    <ProgressContainer>
+      {steps.map((_, idx) => (
+        <React.Fragment key={idx}>
+          <ProgressDot active={idx <= step} />
+          {idx < steps.length - 1 && <ProgressLine completed={idx < step} />}
+        </React.Fragment>
+      ))}
+    </ProgressContainer>
+  );
+
+  // Step screens
+  const StepScreens = [
+    // Step 1: Basic Info
+    <FormContainer key="step1">
+      <Title>Let's Get to Know You</Title>
+      <Subtitle>Fill in your basic info</Subtitle>
+      {renderProgress()}
+      <Input
+        placeholder="Name"
+        value={name}
+        onChangeText={setName}
+        editable={!loading}
+        style={{ borderColor: errors.name ? theme.colors.accent : undefined }}
+        placeholderTextColor={theme.colors.secondaryText}
+      />
+      {errors.name && <ErrorText>{errors.name}</ErrorText>}
+      <Input
+        placeholder="Age"
+        value={age}
+        onChangeText={text => setAge(text.replace(/[^0-9]/g, ''))}
+        keyboardType="numeric"
+        editable={!loading}
+        style={{ borderColor: errors.age ? theme.colors.accent : undefined }}
+        placeholderTextColor={theme.colors.secondaryText}
+      />
+      {errors.age && <ErrorText>{errors.age}</ErrorText>}
+      <Input
+        placeholder="Weight (kg)"
+        value={weight}
+        onChangeText={text => setWeight(text.replace(/[^0-9.]/g, ''))}
+        keyboardType="numeric"
+        editable={!loading}
+        style={{ borderColor: errors.weight ? theme.colors.accent : undefined }}
+        placeholderTextColor={theme.colors.secondaryText}
+      />
+      {errors.weight && <ErrorText>{errors.weight}</ErrorText>}
+      <Input
+        placeholder="Height (cm)"
+        value={height}
+        onChangeText={text => setHeight(text.replace(/[^0-9.]/g, ''))}
+        keyboardType="numeric"
+        editable={!loading}
+        style={{ borderColor: errors.height ? theme.colors.accent : undefined }}
+        placeholderTextColor={theme.colors.secondaryText}
+      />
+      {errors.height && <ErrorText>{errors.height}</ErrorText>}
+      <PickerContainer>
+        <Label>Gender</Label>
+        <PickerWrapper>
+          <StyledPicker
+            selectedValue={gender}
+            onValueChange={(itemValue) => setGender(itemValue as string)}
+            enabled={!loading}
+            dropdownIconColor={theme.colors.text}
+          >
+            <Picker.Item label="Select gender" value="" />
+            <Picker.Item label="Male" value="Male" />
+            <Picker.Item label="Female" value="Female" />
+          </StyledPicker>
+        </PickerWrapper>
+        {errors.gender && <ErrorText>{errors.gender}</ErrorText>}
+      </PickerContainer>
+    </FormContainer>,
+
+    // Step 2: Goals & Preferences
+    <FormContainer key="step2">
+      <Title>Your Goals & Preferences</Title>
+      <Subtitle>Personalize your experience</Subtitle>
+      {renderProgress()}
+      <PickerContainer>
+        <Label>Fitness Goal</Label>
+        <PickerWrapper>
+          <StyledPicker
+            selectedValue={fitnessGoal}
+            onValueChange={(itemValue) => setFitnessGoal(itemValue as string)}
+            enabled={!loading}
+            dropdownIconColor={theme.colors.text}
+          >
+            <Picker.Item label="Lose Weight" value="Lose Weight" />
+            <Picker.Item label="Gain Muscle" value="Gain Muscle" />
+            <Picker.Item label="Maintain Health" value="Maintain Health" />
+          </StyledPicker>
+        </PickerWrapper>
+        {errors.fitnessGoal && <ErrorText>{errors.fitnessGoal}</ErrorText>}
+      </PickerContainer>
+      <PickerContainer>
+        <Label>Dietary Preference</Label>
+        <PickerWrapper>
+          <StyledPicker
+            selectedValue={dietaryPreference}
+            onValueChange={(itemValue) => setDietaryPreference(itemValue as string)}
+            enabled={!loading}
+            dropdownIconColor={theme.colors.text}
+          >
+            <Picker.Item label="None" value="None" />
+            <Picker.Item label="Vegan" value="Vegan" />
+            <Picker.Item label="Vegetarian" value="Vegetarian" />
+            <Picker.Item label="Gluten-Free" value="Gluten-Free" />
+            <Picker.Item label="Keto" value="Keto" />
+            <Picker.Item label="Paleo" value="Paleo" />
+          </StyledPicker>
+        </PickerWrapper>
+      </PickerContainer>
+      <PickerContainer>
+        <Label>Activity Level</Label>
+        <PickerWrapper>
+          <StyledPicker
+            selectedValue={activityLevel}
+            onValueChange={(itemValue) => setActivityLevel(itemValue as string)}
+            enabled={!loading}
+            dropdownIconColor={theme.colors.text}
+          >
+            <Picker.Item label="Select activity level" value="" />
+            <Picker.Item label="Sedentary" value="Sedentary" />
+            <Picker.Item label="Moderate" value="Moderate" />
+            <Picker.Item label="Active" value="Active" />
+          </StyledPicker>
+        </PickerWrapper>
+        {errors.activityLevel && <ErrorText>{errors.activityLevel}</ErrorText>}
+      </PickerContainer>
+      <CheckboxContainer>
+        <Label>Preferred Workout Types</Label>
+        {['Strength', 'Cardio', 'Yoga', 'HIIT', 'Pilates'].map((type) => (
+          <CheckboxRow key={type}>
+            <Checkbox
+              onPress={() => toggleCheckbox(type, preferredWorkoutTypes, setPreferredWorkoutTypes)}
+            >
+              {preferredWorkoutTypes.includes(type) && (
+                <Icon name="check" size={16} color={theme.colors.primary} />
+              )}
+            </Checkbox>
+            <CheckboxText>{type}</CheckboxText>
+          </CheckboxRow>
+        ))}
+      </CheckboxContainer>
+    </FormContainer>,
+
+    // Step 3: Health & Finish
+    <FormContainer key="step3">
+  <Title>Health & Finish</Title>
+  <Subtitle>Almost done!</Subtitle>
+  {renderProgress()}
+  <CheckboxContainer>
+    <Label>Health Conditions</Label>
+    {['None', 'Diabetes', 'Hypertension', 'Heart Condition', 'Knee Injury', 'Back Pain', 'Asthma'].map((condition) => (
+      <CheckboxRow key={condition}>
+        <Checkbox
+          onPress={() => toggleCheckbox(condition, healthConditions, setHealthConditions)}
+        >
+          {healthConditions.includes(condition) && (
+            <Icon name="check" size={16} color={theme.colors.primary} />
+          )}
+        </Checkbox>
+        <CheckboxText>{condition}</CheckboxText>
+      </CheckboxRow>
+    ))}
+  </CheckboxContainer>
+  <CheckboxContainer>
+    <Label>Dietary Restrictions</Label>
+    {['None', 'Peanuts', 'Dairy', 'Gluten', 'Shellfish', 'Soy'].map((restriction) => (
+      <CheckboxRow key={restriction}>
+        <Checkbox
+          onPress={() => toggleCheckbox(restriction, dietaryRestrictions, setDietaryRestrictions)}
+        >
+          {dietaryRestrictions.includes(restriction) && (
+            <Icon name="check" size={16} color={theme.colors.primary} />
+          )}
+        </Checkbox>
+        <CheckboxText>{restriction}</CheckboxText>
+      </CheckboxRow>
+    ))}
+  </CheckboxContainer>
+</FormContainer>
+  ];
+
+  return (
+    <Container>
+      <LinearGradient
+        colors={[theme.colors.primary, theme.colors.secondary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          borderBottomLeftRadius: 20,
+          borderBottomRightRadius: 20,
+          marginBottom: 8,
+          padding: 18,
+          paddingTop: 38,
+          elevation: 2,
+        }}
+      >
+        <Title style={{ color: theme.colors.white }}>Profile Setup</Title>
+        <Subtitle style={{ color: 'rgba(255,255,255,0.85)' }}>
+          Step {step + 1} of {steps.length}: {steps[step]}
+        </Subtitle>
+      </LinearGradient>
+      <CenteredContainer>
+  {StepScreens[step]}
+</CenteredContainer>
+<ButtonContainer>
+  {step > 0 && (
+    <SecondaryButton onPress={handleBack} disabled={loading}>
+      <SecondaryButtonText>Back</SecondaryButtonText>
+    </SecondaryButton>
+  )}
+  {step < StepScreens.length - 1 ? (
+    <PrimaryButtonContainer>
+      <LinearGradient
+        colors={[theme.colors.primary, theme.colors.secondary]}
+        style={{ borderRadius: 10 }}
+      >
+        <TouchableOpacity
+          onPress={handleNext}
+          disabled={loading}
+          style={{ width: '100%', alignItems: 'center', padding: 12 }}
+        >
+          <PrimaryButtonText>
+            Next
+          </PrimaryButtonText>
+        </TouchableOpacity>
+      </LinearGradient>
+    </PrimaryButtonContainer>
+  ) : (
+    <PrimaryButtonContainer>
+      <LinearGradient
+        colors={[theme.colors.primary, theme.colors.secondary]}
+        style={{ borderRadius: 10 }}
+      >
+        <TouchableOpacity
+          onPress={isLastStepComplete() ? handleSubmit : () => navigation.navigate('Home')}
+          disabled={loading}
+          style={{ width: '100%', alignItems: 'center', padding: 12 }}
+        >
+          <PrimaryButtonText>
+            {isLastStepComplete() ? (loading ? 'Completing...' : 'Complete Profile') : 'Skip for Now'}
+          </PrimaryButtonText>
+        </TouchableOpacity>
+      </LinearGradient>
+    </PrimaryButtonContainer>
+  )}
+</ButtonContainer>
+    </Container>
+  );
+};
+
+// --- styled components (reuse your existing ones, or copy from your Home/ProfileSetup) ---
 
 const Container = styled(SafeAreaView)`
   flex: 1;
   background-color: ${(props) => props.theme.colors.background};
 `;
 
-const Content = styled(ScrollView)`
-  flex: 1;
-`;
-
 const CenteredContainer = styled.View`
-  min-height: ${screenHeight - 100}px;
-  justify-content: center;
-  align-items: center;
+  flex: 1;
+  width: 100%;
   padding: 20px;
+  justify-content: flex-start;
 `;
 
 const FormContainer = styled.View`
   width: 100%;
   max-width: 400px;
   align-items: center;
+  flex: 1;
+  margin-bottom: 24px;
 `;
-
 const Title = styled.Text`
   font-family: ${(props) => props.theme.typography.fontFamily.bold};
   font-size: ${(props) => props.theme.typography.fontSize.xlarge}px;
@@ -74,15 +469,6 @@ const Input = styled.TextInput`
       ? 'rgba(255, 255, 255, 0.3)' 
       : '#E0E0E0'
   };
-  shadow-color: ${(props) => 
-    props.theme.colors.background === '#1C2526' 
-      ? 'rgba(255, 255, 255, 0.1)' 
-      : 'rgba(0, 0, 0, 0.1)'
-  };
-  shadow-offset: 0px 2px;
-  shadow-opacity: 0.1;
-  shadow-radius: 4px;
-  elevation: 2;
 `;
 
 const PickerContainer = styled.View`
@@ -110,15 +496,6 @@ const PickerWrapper = styled.View`
       ? 'rgba(255, 255, 255, 0.3)' 
       : '#E0E0E0'
   };
-  shadow-color: ${(props) => 
-    props.theme.colors.background === '#1C2526' 
-      ? 'rgba(255, 255, 255, 0.1)' 
-      : 'rgba(0, 0, 0, 0.1)'
-  };
-  shadow-offset: 0px 2px;
-  shadow-opacity: 0.1;
-  shadow-radius: 4px;
-  elevation: 2;
 `;
 
 const StyledPicker = styled(Picker)`
@@ -153,52 +530,6 @@ const CheckboxText = styled.Text`
   color: ${(props) => props.theme.colors.text};
 `;
 
-const Chatbot = styled.View`
-  flex-direction: row;
-  background-color: ${(props) => 
-    props.theme.colors.background === '#1C2526' 
-      ? 'rgba(255, 255, 255, 0.05)' 
-      : `${props.theme.colors.primary}20`
-  };
-  border-radius: 20px;
-  padding: 20px;
-  align-items: center;
-  margin-bottom: 30px;
-  border: 1px solid ${(props) => 
-    props.theme.colors.background === '#1C2526' 
-      ? 'rgba(255, 255, 255, 0.1)' 
-      : `${props.theme.colors.primary}30`
-  };
-  shadow-color: ${(props) => 
-    props.theme.colors.background === '#1C2526' 
-      ? 'rgba(255, 255, 255, 0.1)' 
-      : 'rgba(0, 0, 0, 0.05)'
-  };
-  shadow-offset: 0px 2px;
-  shadow-opacity: 0.1;
-  shadow-radius: 4px;
-  elevation: 2;
-`;
-
-const ChatbotText = styled.Text`
-  font-family: ${(props) => props.theme.typography.fontFamily.regular};
-  font-size: ${(props) => props.theme.typography.fontSize.small}px;
-  color: ${(props) => props.theme.colors.text};
-  margin-left: 12px;
-  flex: 1;
-  line-height: 20px;
-`;
-
-const ErrorText = styled.Text`
-  font-family: ${(props) => props.theme.typography.fontFamily.regular};
-  font-size: ${(props) => props.theme.typography.fontSize.small}px;
-  color: ${(props) => props.theme.colors.accent};
-  text-align: left;
-  margin-bottom: 8px;
-  margin-top: -12px;
-  padding-left: 4px;
-`;
-
 const ProgressContainer = styled.View`
   flex-direction: row;
   justify-content: center;
@@ -226,14 +557,19 @@ const ProgressLine = styled.View<{ completed: boolean }>`
 const ButtonContainer = styled.View`
   flex-direction: row;
   justify-content: space-between;
-  margin-top: 20px;
+  margin-bottom: 6px;
+  margin-top: 8px;
   width: 100%;
+  max-width: 400px; 
+  align-self: center; 
+  padding-left: 10px;
+  padding-right: 10px;
 `;
 
 const SecondaryButton = styled(TouchableOpacity)`
   flex: 1;
-  padding: 16px;
-  border-radius: 12px;
+  padding: 10px;
+  border-radius: 10px;
   border: 2px solid ${(props) => props.theme.colors.primary};
   margin-right: 8px;
   align-items: center;
@@ -243,6 +579,7 @@ const SecondaryButton = styled(TouchableOpacity)`
       ? 'rgba(255, 255, 255, 0.05)' 
       : 'transparent'
   };
+  margin-left: 0; 
 `;
 
 const SecondaryButtonText = styled.Text`
@@ -254,15 +591,7 @@ const SecondaryButtonText = styled.Text`
 const PrimaryButtonContainer = styled.View`
   flex: 1;
   margin-left: 8px;
-`;
-
-const PrimaryButton = styled.View`
-  flex-direction: row;
-  padding: 16px 20px;
-  border-radius: 12px;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
+  margin-right: 0; 
 `;
 
 const PrimaryButtonText = styled.Text`
@@ -271,604 +600,14 @@ const PrimaryButtonText = styled.Text`
   color: ${(props) => props.theme.colors.white};
 `;
 
-const COMPLETE_PROFILE = gql`
-  mutation CompleteProfile(
-    $name: String!
-    $age: Int!
-    $weight: Float!
-    $height: Float!
-    $gender: String!
-    $fitnessGoal: String!
-    $dietaryPreference: String!
-    $healthConditions: [String!]!
-    $activityLevel: String!
-    $preferredWorkoutTypes: [String!]!
-    $dietaryRestrictions: [String!]!
-  ) {
-    completeProfile(
-      name: $name
-      age: $age
-      weight: $weight
-      height: $height
-      gender: $gender
-      fitnessGoal: $fitnessGoal
-      dietaryPreference: $dietaryPreference
-      healthConditions: $healthConditions
-      activityLevel: $activityLevel
-      preferredWorkoutTypes: $preferredWorkoutTypes
-      dietaryRestrictions: $dietaryRestrictions
-    ) {
-      id
-      name
-      email
-      age
-      weight
-      height
-      gender
-      fitnessGoal
-      dietaryPreference
-      healthConditions
-      activityLevel
-      preferredWorkoutTypes
-      dietaryRestrictions
-      isProfileComplete
-    }
-  }
+const ErrorText = styled.Text`
+  font-family: ${(props) => props.theme.typography.fontFamily.regular};
+  font-size: ${(props) => props.theme.typography.fontSize.small}px;
+  color: ${(props) => props.theme.colors.accent};
+  text-align: left;
+  margin-bottom: 8px;
+  margin-top: -12px;
+  padding-left: 4px;
 `;
-
-const ProfileSetup: React.FC = () => {
-  const navigation = useNavigation<ProfileSetupNavigationProp>();
-  const theme = useTheme();
-  const { user, setUser } = useAuthStore();
-
-  // Form state
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [weight, setWeight] = useState('');
-  const [height, setHeight] = useState('');
-  const [gender, setGender] = useState('');
-  const [fitnessGoal, setFitnessGoal] = useState('Lose Weight');
-  const [dietaryPreference, setDietaryPreference] = useState('None');
-  const [healthConditions, setHealthConditions] = useState<string[]>([]);
-  const [activityLevel, setActivityLevel] = useState('');
-  const [preferredWorkoutTypes, setPreferredWorkoutTypes] = useState<string[]>([]);
-  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
-
-  // Error state
-  const [nameError, setNameError] = useState<string | null>(null);
-  const [ageError, setAgeError] = useState<string | null>(null);
-  const [weightError, setWeightError] = useState<string | null>(null);
-  const [heightError, setHeightError] = useState<string | null>(null);
-  const [genderError, setGenderError] = useState<string | null>(null);
-  const [activityLevelError, setActivityLevelError] = useState<string | null>(null);
-  const [generalError, setGeneralError] = useState<string | null>(null);
-
-  // UI state
-  const [refreshing, setRefreshing] = useState(false);
-
-  // Animation
-  const buttonScale = useRef(new Animated.Value(1)).current;
-  const chatbotOpacity = useRef(new Animated.Value(0)).current;
-
-  const [completeProfile, { loading }] = useMutation(COMPLETE_PROFILE, {
-    onCompleted: (data) => {
-      try {
-        // Update user in store
-        setUser(data.completeProfile);
-        
-        // Show success message
-        Alert.alert(
-          'Profile Complete!',
-          'Welcome to FitTrack! Your fitness journey starts now.',
-          [
-            {
-              text: 'Let\'s Go!',
-              onPress: () => navigation.navigate('Home'),
-              style: 'default'
-            }
-          ]
-        );
-      } catch (err) {
-        setGeneralError('Profile completed but navigation failed. Please restart the app.');
-      }
-    },
-    onError: (error) => {
-      console.error('Profile completion error:', error);
-      setGeneralError(error.message || 'Failed to complete profile. Please try again.');
-    },
-  });
-
-  // Animate chatbot on mount
-  useEffect(() => {
-    Animated.timing(chatbotOpacity, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  // Update chatbot message based on name
-  useEffect(() => {
-    if (name.trim()) {
-      Animated.sequence([
-        Animated.timing(chatbotOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(chatbotOpacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [name]);
-
-  const validateForm = (): boolean => {
-    // Clear previous errors
-    setNameError(null);
-    setAgeError(null);
-    setWeightError(null);
-    setHeightError(null);
-    setGenderError(null);
-    setActivityLevelError(null);
-    setGeneralError(null);
-    
-    let hasError = false;
-    
-    // Name validation
-    if (!name.trim()) {
-      setNameError('Name is required');
-      hasError = true;
-    } else if (name.trim().length < 2) {
-      setNameError('Name must be at least 2 characters');
-      hasError = true;
-    }
-    
-    // Age validation
-    const ageNum = parseInt(age);
-    if (!age.trim()) {
-      setAgeError('Age is required');
-      hasError = true;
-    } else if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
-      setAgeError('Please enter a valid age (13-120)');
-      hasError = true;
-    }
-    
-    // Weight validation
-    const weightNum = parseFloat(weight);
-    if (!weight.trim()) {
-      setWeightError('Weight is required');
-      hasError = true;
-    } else if (isNaN(weightNum) || weightNum < 20 || weightNum > 500) {
-      setWeightError('Please enter a valid weight (20-500 kg)');
-      hasError = true;
-    }
-    
-    // Height validation
-    const heightNum = parseFloat(height);
-    if (!height.trim()) {
-      setHeightError('Height is required');
-      hasError = true;
-    } else if (isNaN(heightNum) || heightNum < 100 || heightNum > 250) {
-      setHeightError('Please enter a valid height (100-250 cm)');
-      hasError = true;
-    }
-
-    // Gender validation
-    if(!gender) {
-      setGenderError('Gender is required');
-      hasError = true;
-    }
-    
-    // Activity Level validation
-    if (!activityLevel) {
-      setActivityLevelError('Activity level is required');
-      hasError = true;
-    }
-    
-    return !hasError;
-  };
-
-  const handleNext = async () => {
-    if (!validateForm()) return;
-    
-    try {
-      await completeProfile({
-        variables: {
-          name: name.trim(),
-          age: parseInt(age),
-          weight: parseFloat(weight),
-          height: parseFloat(height),
-          gender,
-          fitnessGoal,
-          dietaryPreference,
-          healthConditions,
-          activityLevel,
-          preferredWorkoutTypes,
-          dietaryRestrictions,
-        },
-      });
-    } catch (err) {
-      console.error('Profile completion submission error:', err);
-    }
-  };
-
-  const handleSkip = () => {
-    Alert.alert(
-      'Skip Profile Setup?',
-      'You can complete your profile later in settings, but having complete information helps us create better fitness plans for you.',
-      [
-        {
-          text: 'Complete Now',
-          style: 'default',
-        },
-        {
-          text: 'Skip for Now',
-          style: 'destructive',
-          onPress: () => navigation.navigate('Home'),
-        },
-      ]
-    );
-  };
-
-  const handlePressIn = () => {
-    Animated.spring(buttonScale, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(buttonScale, {
-      toValue: 1,
-      friction: 3,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    setGeneralError(null);
-    setNameError(null);
-    setAgeError(null);
-    setWeightError(null);
-    setHeightError(null);
-    setGenderError(null);
-    setActivityLevelError(null);
-    setName('');
-    setAge('');
-    setWeight('');
-    setHeight('');
-    setGender('');
-    setFitnessGoal('Lose Weight');
-    setDietaryPreference('None');
-    setHealthConditions([]);
-    setActivityLevel('');
-    setPreferredWorkoutTypes([]);
-    setDietaryRestrictions([]);
-    setTimeout(() => setRefreshing(false), 1000);
-  };
-
-  const toggleCheckbox = (value: string, current: string[], setter: (values: string[]) => void) => {
-    if (current.includes(value)) {
-      setter(current.filter((item) => item !== value));
-    } else {
-      setter([...current, value]);
-    }
-  };
-
-  const getChatbotMessage = () => {
-    const firstName = name.trim().split(' ')[0];
-    if (firstName) {
-      if (fitnessGoal === 'Lose Weight') {
-        return `Great choice, ${firstName}! I'll help you achieve your weight loss goals with personalized workouts and nutrition tips.`;
-      } else if (fitnessGoal === 'Gain Muscle') {
-        return `Awesome, ${firstName}! Let's build some muscle together with targeted strength training and nutrition guidance.`;
-      } else {
-        return `Perfect, ${firstName}! Maintaining health is key to a happy life. I'll help you stay on track with balanced fitness routines.`;
-      }
-    }
-    return "Hi there! I'm your AI fitness assistant. Let's set up your profile so I can create the perfect fitness plan for you!";
-  };
-
-  const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
-
-  return (
-    <Container>
-      <Content
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
-        <CenteredContainer>
-          <FormContainer>
-            <Title>Let's Get to Know You</Title>
-            <Subtitle>Complete your profile to get personalized recommendations</Subtitle>
-
-            <ProgressContainer>
-              <ProgressDot active={true} />
-              <ProgressLine completed={true} />
-              <ProgressDot active={false} />
-              <ProgressLine completed={false} />
-              <ProgressDot active={false} />
-            </ProgressContainer>
-
-            <Input
-              placeholder="What's your name?"
-              placeholderTextColor={
-                theme.colors.background === '#1C2526' 
-                  ? 'rgba(255, 255, 255, 0.6)' 
-                  : theme.colors.secondaryText
-              }
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                if (nameError) setNameError(null);
-              }}
-              editable={!loading}
-              style={{
-                borderColor: nameError ? theme.colors.accent : (
-                  theme.colors.background === '#1C2526' 
-                    ? 'rgba(255, 255, 255, 0.3)' 
-                    : '#E0E0E0'
-                )
-              }}
-            />
-            {nameError && <ErrorText>{nameError}</ErrorText>}
-
-            <Input
-              placeholder="What's your age?"
-              placeholderTextColor={
-                theme.colors.background === '#1C2526' 
-                  ? 'rgba(255, 255, 255, 0.6)' 
-                  : theme.colors.secondaryText
-              }
-              value={age}
-              onChangeText={(text) => {
-                setAge(text.replace(/[^0-9]/g, ''));
-                if (ageError) setAgeError(null);
-              }}
-              keyboardType="numeric"
-              maxLength={3}
-              editable={!loading}
-              style={{
-                borderColor: ageError ? theme.colors.accent : (
-                  theme.colors.background === '#1C2526' 
-                    ? 'rgba(255, 255, 255, 0.3)' 
-                    : '#E0E0E0'
-                )
-              }}
-            />
-            {ageError && <ErrorText>{ageError}</ErrorText>}
-
-            <Input
-              placeholder="What's your weight? (kg)"
-              placeholderTextColor={
-                theme.colors.background === '#1C2526' 
-                  ? 'rgba(255, 255, 255, 0.6)' 
-                  : theme.colors.secondaryText
-              }
-              value={weight}
-              onChangeText={(text) => {
-                setWeight(text.replace(/[^0-9.]/g, ''));
-                if (weightError) setWeightError(null);
-              }}
-              keyboardType="numeric"
-              editable={!loading}
-              style={{
-                borderColor: weightError ? theme.colors.accent : (
-                  theme.colors.background === '#1C2526' 
-                    ? 'rgba(255, 255, 255, 0.3)' 
-                    : '#E0E0E0'
-                )
-              }}
-            />
-            {weightError && <ErrorText>{weightError}</ErrorText>}
-
-            <Input
-              placeholder="What's your height? (cm)"
-              placeholderTextColor={
-                theme.colors.background === '#1C2526' 
-                  ? 'rgba(255, 255, 255, 0.6)' 
-                  : theme.colors.secondaryText
-              }
-              value={height}
-              onChangeText={(text) => {
-                setHeight(text.replace(/[^0-9.]/g, ''));
-                if (heightError) setHeightError(null);
-              }}
-              keyboardType="numeric"
-              editable={!loading}
-              style={{
-                borderColor: heightError ? theme.colors.accent : (
-                  theme.colors.background === '#1C2526' 
-                    ? 'rgba(255, 255, 255, 0.3)' 
-                    : '#E0E0E0'
-                )
-              }}
-            />
-            {heightError && <ErrorText>{heightError}</ErrorText>}
-
-            <PickerContainer>
-              <Label>Gender</Label>
-              <PickerWrapper>
-                <StyledPicker
-                  selectedValue={gender}
-                  onValueChange={(itemValue) => {
-                    setGender(itemValue as string);
-                    if (genderError) setGenderError(null);
-                  }}
-                  enabled={!loading}
-                  dropdownIconColor={theme.colors.text}
-                >
-                  <Picker.Item label="Select gender" value="" />
-                  <Picker.Item label="Male" value="Male" />
-                  <Picker.Item label="Female" value="Female" />
-                </StyledPicker>
-              </PickerWrapper>
-            </PickerContainer>
-
-            <PickerContainer>
-              <Label>What's your fitness goal?</Label>
-              <PickerWrapper>
-                <StyledPicker
-                  selectedValue={fitnessGoal}
-                  onValueChange={(itemValue) => setFitnessGoal(itemValue as string)}
-                  enabled={!loading}
-                  dropdownIconColor={theme.colors.text}
-                >
-                  <Picker.Item label="Select a goal" value="" />
-                  <Picker.Item label="Lose Weight" value="Lose Weight" />
-                  <Picker.Item label="Gain Muscle" value="Gain Muscle" />
-                  <Picker.Item label="Maintain Health" value="Maintain Health" />
-                </StyledPicker>
-              </PickerWrapper>
-            </PickerContainer>
-
-            <PickerContainer>
-              <Label>Dietary Preference</Label>
-              <PickerWrapper>
-                <StyledPicker
-                  selectedValue={dietaryPreference}
-                  onValueChange={(itemValue) => setDietaryPreference(itemValue as string)}
-                  enabled={!loading}
-                  dropdownIconColor={theme.colors.text}
-                >
-                  <Picker.Item label="Select a preference" value="" />
-                  <Picker.Item label="None" value="None" />
-                  <Picker.Item label="Vegan" value="Vegan" />
-                  <Picker.Item label="Vegetarian" value="Vegetarian" />
-                  <Picker.Item label="Gluten-Free" value="Gluten-Free" />
-                  <Picker.Item label="Keto" value="Keto" />
-                  <Picker.Item label="Paleo" value="Paleo" />
-                </StyledPicker>
-              </PickerWrapper>
-            </PickerContainer>
-
-            <CheckboxContainer>
-              <Label>Health Conditions</Label>
-              {['None', 'Diabetes', 'Hypertension', 'Heart Condition', 'Knee Injury', 'Back Pain', 'Asthma'].map((condition) => (
-                <CheckboxRow key={condition}>
-                  <Checkbox
-                    onPress={() => toggleCheckbox(condition, healthConditions, setHealthConditions)}
-                  >
-                    {healthConditions.includes(condition) && (
-                      <Icon name="check" size={16} color={theme.colors.primary} />
-                    )}
-                  </Checkbox>
-                  <CheckboxText>{condition}</CheckboxText>
-                </CheckboxRow>
-              ))}
-            </CheckboxContainer>
-
-            <PickerContainer>
-              <Label>Activity Level</Label>
-              <PickerWrapper>
-                <StyledPicker
-                  selectedValue={activityLevel}
-                  onValueChange={(itemValue) => {
-                    setActivityLevel(itemValue as string);
-                    if (activityLevelError) setActivityLevelError(null);
-                  }}
-                  enabled={!loading}
-                  dropdownIconColor={theme.colors.text}
-                >
-                  <Picker.Item label="Select activity level" value="" />
-                  <Picker.Item label="Sedentary" value="Sedentary" />
-                  <Picker.Item label="Moderate" value="Moderate" />
-                  <Picker.Item label="Active" value="Active" />
-                </StyledPicker>
-              </PickerWrapper>
-              {activityLevelError && <ErrorText>{activityLevelError}</ErrorText>}
-            </PickerContainer>
-
-            <CheckboxContainer>
-              <Label>Preferred Workout Types</Label>
-              {['Strength', 'Cardio', 'Yoga', 'HIIT', 'Pilates'].map((type) => (
-                <CheckboxRow key={type}>
-                  <Checkbox
-                    onPress={() => toggleCheckbox(type, preferredWorkoutTypes, setPreferredWorkoutTypes)}
-                  >
-                    {preferredWorkoutTypes.includes(type) && (
-                      <Icon name="check" size={16} color={theme.colors.primary} />
-                    )}
-                  </Checkbox>
-                  <CheckboxText>{type}</CheckboxText>
-                </CheckboxRow>
-              ))}
-            </CheckboxContainer>
-
-            <CheckboxContainer>
-              <Label>Dietary Restrictions</Label>
-              {['None', 'Peanuts', 'Dairy', 'Gluten', 'Shellfish', 'Soy'].map((restriction) => (
-                <CheckboxRow key={restriction}>
-                  <Checkbox
-                    onPress={() => toggleCheckbox(restriction, dietaryRestrictions, setDietaryRestrictions)}
-                  >
-                    {dietaryRestrictions.includes(restriction) && (
-                      <Icon name="check" size={16} color={theme.colors.primary} />
-                    )}
-                  </Checkbox>
-                  <CheckboxText>{restriction}</CheckboxText>
-                </CheckboxRow>
-              ))}
-            </CheckboxContainer>
-
-            {generalError && (
-              <ErrorText style={{ textAlign: 'center', marginBottom: 15 }}>
-                {generalError}
-              </ErrorText>
-            )}
-
-            <Animated.View style={{ opacity: chatbotOpacity }}>
-              <Chatbot>
-                <Icon name="smart-toy" size={24} color={theme.colors.primary} />
-                <ChatbotText>{getChatbotMessage()}</ChatbotText>
-              </Chatbot>
-            </Animated.View>
-
-            <ButtonContainer>
-              <SecondaryButton onPress={handleSkip} disabled={loading}>
-                <SecondaryButtonText>Skip for Now</SecondaryButtonText>
-              </SecondaryButton>
-
-              <PrimaryButtonContainer>
-                <LinearGradient
-                  colors={[theme.colors.primary, theme.colors.secondary]}
-                  style={{ borderRadius: 12 }}
-                >
-                  <AnimatedTouchable
-                    style={{
-                      transform: [{ scale: buttonScale }],
-                    }}
-                    onPressIn={handlePressIn}
-                    onPressOut={handlePressOut}
-                    onPress={handleNext}
-                    disabled={loading}
-                  >
-                    <PrimaryButton>
-                      <PrimaryButtonText>
-                        {loading ? 'Completing...' : 'Complete Profile'}
-                      </PrimaryButtonText>
-                    </PrimaryButton>
-                  </AnimatedTouchable>
-                </LinearGradient>
-              </PrimaryButtonContainer>
-            </ButtonContainer>
-          </FormContainer>
-        </CenteredContainer>
-      </Content>
-    </Container>
-  );
-};
 
 export default ProfileSetup;
