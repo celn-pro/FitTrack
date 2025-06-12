@@ -1,54 +1,47 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import styled, { useTheme } from 'styled-components/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAuthStore, authUtils } from '../store/authStore';
-import { useNavigation } from '@react-navigation/native';
-import type { StackNavigationProp } from '@react-navigation/stack';
-import { COLORS } from '../styles/colors';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-type RootStackParamList = {
-  Login: undefined;
-  // add other routes here if needed
-};
+import { RootStackParamList } from '../navigation/types';
 
 const Profile: React.FC = () => {
   const theme = useTheme();
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { user, logout } = useAuthStore();
 
- 
-const handleLogout = async () => {
-  Alert.alert(
-    'Log Out',
-    'Are you sure you want to log out?',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      { 
-        text: 'Log Out', 
-        style: 'destructive', 
-        onPress: async () => {
-          // Clear all cached data
-          await AsyncStorage.multiRemove([
-            'recommendations',
-            'recommendationsDate',
-            'healthTips',
-            'healthTipsDate',
-            'didYouKnow',
-            'didYouKnowDate',
-            'moodHistory',
-            'lastLoginDate',
-            'loginStreak',
-            'streakHistory'
-          ]);
-          logout();
-          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-        }
-      },
-    ]
-  );
-};
+  const handleLogout = async () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.multiRemove([
+              'recommendations',
+              'recommendationsDate',
+              'healthTips',
+              'healthTipsDate',
+              'didYouKnow',
+              'didYouKnowDate',
+              'moodHistory',
+              'lastLoginDate',
+              'loginStreak',
+              'streakHistory'
+            ]);
+            logout();
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+          }
+        },
+      ]
+    );
+  };
 
   if (!user) {
     return (
@@ -88,7 +81,7 @@ const handleLogout = async () => {
         </HeaderContent>
       </LinearGradient>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <SectionTitle>Profile Details</SectionTitle>
+        <SectionTitle>Profile Overview</SectionTitle>
         <DetailRow>
           <DetailLabel>Name</DetailLabel>
           <DetailValue>{user.name || '-'}</DetailValue>
@@ -102,26 +95,6 @@ const handleLogout = async () => {
           <DetailValue>{user.fitnessGoal || '-'}</DetailValue>
         </DetailRow>
         <DetailRow>
-          <DetailLabel>Height</DetailLabel>
-          <DetailValue>{user.height ? `${user.height} cm` : '-'}</DetailValue>
-        </DetailRow>
-        <DetailRow>
-          <DetailLabel>Weight</DetailLabel>
-          <DetailValue>{user.weight ? `${user.weight} kg` : '-'}</DetailValue>
-        </DetailRow>
-        <DetailRow>
-          <DetailLabel>BMI</DetailLabel>
-          <DetailValue>
-            {authUtils.calculateBMI() !== null
-              ? `${authUtils.calculateBMI()} (${authUtils.getBMICategory()})`
-              : '-'}
-          </DetailValue>
-        </DetailRow>
-        <DetailRow>
-          <DetailLabel>Dietary Preference</DetailLabel>
-          <DetailValue>{user.dietaryPreference || '-'}</DetailValue>
-        </DetailRow>
-        <DetailRow>
           <DetailLabel>Profile Complete</DetailLabel>
           <DetailValue>
             {user.isProfileComplete ? (
@@ -131,7 +104,44 @@ const handleLogout = async () => {
             )}
           </DetailValue>
         </DetailRow>
-        {/* Add more profile details as needed */}
+
+        <SectionTitle>Activity</SectionTitle>
+        <ActivityRow>
+          <ActivityCard onPress={() => navigation.navigate('Tracking')}>
+            <Icon name="directions-walk" size={28} color={theme.colors.primary} />
+            <ActivityLabel>Activity</ActivityLabel>
+          </ActivityCard>
+          <ActivityCard onPress={() => navigation.navigate('Courses')}>
+            <Icon name="school" size={28} color={theme.colors.primary} />
+            <ActivityLabel>Courses</ActivityLabel>
+          </ActivityCard>
+          <ActivityCard onPress={() => navigation.navigate('SocialFeed')}>
+            <Icon name="groups" size={28} color={theme.colors.primary} />
+            <ActivityLabel>Social</ActivityLabel>
+          </ActivityCard>
+        </ActivityRow>
+
+        <SectionTitle>Quick Links</SectionTitle>
+        <ActionButton onPress={() => navigation.navigate('Settings')}>
+          <Icon name="settings" size={20} color={theme.colors.primary} />
+          <ActionLabel>Settings</ActionLabel>
+        </ActionButton>
+        <ActionButton onPress={() => navigation.navigate('Courses')}>
+          <Icon name="school" size={20} color={theme.colors.secondary} />
+          <ActionLabel>My Courses</ActionLabel>
+        </ActionButton>
+        <ActionButton onPress={() => navigation.navigate('Tracking')}>
+          <Icon name="directions-run" size={20} color={theme.colors.secondary} />
+          <ActionLabel>My Activity</ActionLabel>
+        </ActionButton>
+        <ActionButton onPress={() => navigation.navigate('SocialFeed')}>
+          <Icon name="groups" size={20} color={theme.colors.secondary} />
+          <ActionLabel>Community Feed</ActionLabel>
+        </ActionButton>
+        <ActionButton onPress={handleLogout}>
+          <Icon name="logout" size={20} color={theme.colors.accent} />
+          <ActionLabel>Log Out</ActionLabel>
+        </ActionButton>
       </ScrollView>
     </Container>
   );
@@ -180,7 +190,7 @@ const SectionTitle = styled.Text`
   font-size: 16px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.text};
-  margin-bottom: 18px;
+  margin: 24px 0 12px 0;
 `;
 
 const DetailRow = styled.View`
@@ -206,6 +216,45 @@ const EmptyText = styled.Text`
   font-size: 16px;
   color: ${({ theme }) => theme.colors.secondaryText};
   margin-top: 20px;
+`;
+
+const ActivityRow = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  margin: 10px 0 18px 0;
+`;
+
+const ActivityCard = styled.TouchableOpacity`
+  flex: 1;
+  align-items: center;
+  background-color: ${({ theme }) => theme.colors.card || '#f6f8fa'};
+  border-radius: 12px;
+  margin: 0 6px;
+  padding: 18px 0 10px 0;
+  elevation: 1;
+`;
+
+const ActivityLabel = styled.Text`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.secondaryText};
+  margin-top: 8px;
+`;
+
+const ActionButton = styled.TouchableOpacity`
+  flex-direction: row;
+  align-items: center;
+  background-color: ${({ theme }) => theme.colors.card || '#f6f8fa'};
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin-top: 12px;
+  elevation: 1;
+`;
+
+const ActionLabel = styled.Text`
+  font-size: 15px;
+  color: ${({ theme }) => theme.colors.text};
+  margin-left: 12px;
+  font-weight: 500;
 `;
 
 const styles = StyleSheet.create({

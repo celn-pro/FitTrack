@@ -6,6 +6,7 @@ export const TYPOGRAPHY = {
     bold: 'Poppins-Bold',
   },
   fontSize: {
+    xsmall: 10,
     small: 12,
     medium: 16,
     large: 20,

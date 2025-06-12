@@ -434,3 +434,133 @@ export const COURSES: Course[] = [
   },
   // ...other courses for other goals
 ];
+
+// ...existing code...
+
+export interface FeedPost {
+  id: string;
+  user: {
+    name: string;
+    avatar?: string;
+  };
+  content: string;
+  createdAt: string;
+  image?: string;
+  likes: number;
+  comments: number;
+  activityType?: string; // e.g. 'steps', 'workout', 'course'
+  activityValue?: string;
+}
+
+// --- Rich mock data for Social Feed ---
+export const MOCK_SOCIAL_FEED: FeedPost[] = [
+  {
+    id: 'p1',
+    user: {
+      name: 'Alice Johnson',
+      avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
+    },
+    content: "Just finished my morning run! 🏃‍♀️ Feeling energized and ready to take on the day.",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb',
+    likes: 23,
+    comments: 5,
+    activityType: 'steps',
+    activityValue: '8500',
+  },
+  {
+    id: 'p2',
+    user: {
+      name: 'Brian Lee',
+      avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+    },
+    content: "Completed the 'Full Body Strength' course! 💪 Highly recommend for beginners.",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+    image: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c',
+    likes: 15,
+    comments: 2,
+    activityType: 'course',
+    activityValue: '',
+  },
+  {
+    id: 'p3',
+    user: {
+      name: 'Carla Mendes',
+      avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
+    },
+    content: "Hydration tip: Always keep a bottle at your desk. Hit my 2L goal today! 💧",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
+    likes: 12,
+    comments: 1,
+    activityType: 'hydration',
+    activityValue: '2000',
+  },
+  {
+    id: 'p4',
+    user: {
+      name: 'David Kim',
+      avatar: 'https://randomuser.me/api/portraits/men/85.jpg',
+    },
+    content: "Smashed my personal best: 12,000 steps! 🚶‍♂️",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+    likes: 30,
+    comments: 7,
+    activityType: 'steps',
+    activityValue: '12000',
+  },
+  {
+    id: 'p5',
+    user: {
+      name: 'Emily Zhang',
+      avatar: 'https://randomuser.me/api/portraits/women/25.jpg',
+    },
+    content: "Tried a new healthy breakfast recipe today. So tasty and filling! 🍳🥑",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
+    image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836',
+    likes: 18,
+    comments: 3,
+    activityType: 'nutrition',
+    activityValue: '',
+  },
+  {
+    id: 'p6',
+    user: {
+      name: 'Frank O\'Connor',
+      avatar: 'https://randomuser.me/api/portraits/men/41.jpg',
+    },
+    content: "Finished 'Fat Loss Fundamentals' course. Down 2kg already! 🔥",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    likes: 22,
+    comments: 4,
+    activityType: 'course',
+    activityValue: '',
+  },
+  {
+    id: 'p7',
+    user: {
+      name: 'Grace Lin',
+      avatar: 'https://randomuser.me/api/portraits/women/12.jpg',
+    },
+    content: "Power nap for 20 minutes. Feel so refreshed! 😴",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+    likes: 9,
+    comments: 0,
+    activityType: 'sleep',
+    activityValue: '20',
+  },
+  {
+    id: 'p8',
+    user: {
+      name: 'Henry Ford',
+      avatar: 'https://randomuser.me/api/portraits/men/12.jpg',
+    },
+    content: "Logged 8 hours of sleep last night. Ready to crush my goals today!",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 10).toISOString(),
+    likes: 14,
+    comments: 2,
+    activityType: 'sleep',
+    activityValue: '8',
+  },
+];
+
+// ...existing code...

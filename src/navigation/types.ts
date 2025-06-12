@@ -5,6 +5,7 @@ export type RootStackParamList = {
   OnboardingRegistration: undefined;
   OnboardingProfileSetup: undefined;
   Home: undefined;
+  Tracking: undefined;
   Login: undefined;
   Profile: undefined;
   Courses: undefined;

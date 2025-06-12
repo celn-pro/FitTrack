@@ -157,6 +157,20 @@ const LoginLink = styled.Text`
   color: ${(props) => props.theme.colors.primary};
 `;
 
+const InputContainer = styled.View`
+  width: 100%;
+  position: relative;
+  margin-bottom: 16px;
+`;
+
+const PasswordToggle = styled(TouchableOpacity)`
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-10px);
+  padding: 4px;
+`;
+
 const REGISTER_USER = gql`
   mutation RegisterUser($email: String!, $password: String!) {
     registerUser(email: $email, password: $password) {
@@ -182,6 +196,8 @@ const Registration: React.FC = () => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const buttonScale = useRef(new Animated.Value(1)).current;
 
@@ -352,6 +368,7 @@ const Registration: React.FC = () => {
             />
             {emailError && <ErrorText>{emailError}</ErrorText>}
             
+            <InputContainer>
             <Input
               placeholder="Password"
               placeholderTextColor={
@@ -364,7 +381,7 @@ const Registration: React.FC = () => {
                 setPassword(text);
                 if (passwordError) setPasswordError(null);
               }}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               editable={!loading}
               style={{
                 borderColor: passwordError ? theme.colors.accent : (
@@ -374,8 +391,20 @@ const Registration: React.FC = () => {
                 )
               }}
             />
-            {passwordError && <ErrorText>{passwordError}</ErrorText>}
-            
+            <PasswordToggle onPress={() => setShowPassword(!showPassword)}>
+              <Icon 
+                name={showPassword ? "visibility-off" : "visibility"} 
+                size={20} 
+                color={theme.colors.background === '#1C2526' 
+                  ? 'rgba(255, 255, 255, 0.6)' 
+                  : theme.colors.secondaryText
+                } 
+              />
+            </PasswordToggle>
+          </InputContainer>
+          {passwordError && <ErrorText>{passwordError}</ErrorText>}
+
+          <InputContainer>
             <Input
               placeholder="Confirm Password"
               placeholderTextColor={
@@ -388,7 +417,7 @@ const Registration: React.FC = () => {
                 setConfirmPassword(text);
                 if (confirmPasswordError) setConfirmPasswordError(null);
               }}
-              secureTextEntry
+              secureTextEntry={!showConfirmPassword}
               editable={!loading}
               style={{
                 borderColor: confirmPasswordError ? theme.colors.accent : (
@@ -398,7 +427,18 @@ const Registration: React.FC = () => {
                 )
               }}
             />
-            {confirmPasswordError && <ErrorText>{confirmPasswordError}</ErrorText>}
+            <PasswordToggle onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+              <Icon 
+                name={showConfirmPassword ? "visibility-off" : "visibility"} 
+                size={20} 
+                color={theme.colors.background === '#1C2526' 
+                  ? 'rgba(255, 255, 255, 0.6)' 
+                  : theme.colors.secondaryText
+                } 
+              />
+            </PasswordToggle>
+          </InputContainer>
+          {confirmPasswordError && <ErrorText>{confirmPasswordError}</ErrorText>}
             
             {error && (
               <ErrorText style={{ textAlign: 'center', marginTop: 8 }}>

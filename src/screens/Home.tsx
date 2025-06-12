@@ -481,15 +481,15 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
               </TouchableOpacity>
             </View>
             <TouchableOpacity 
-  onPress={toggleTheme}
-  style={styles.themeToggle}
->
-  <Icon 
-    name={isDark ? 'dark-mode' : 'light-mode'}
-    size={24}
-    color={theme.colors.white}
-  />
-</TouchableOpacity>
+              onPress={toggleTheme}
+              style={styles.themeToggle}
+            >
+              <Icon 
+                name={isDark ? 'dark-mode' : 'light-mode'}
+                size={24}
+                color={theme.colors.white}
+              />
+            </TouchableOpacity>
           </HeaderContent>
           
           {/* Streak Counter */}
@@ -693,7 +693,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
                   style={styles.healthTipGradient}
                 >
                   <HealthTipCard>
-                    <Icon name={tip.icon} size={20} color={theme.colors.primary} />
+                    <Icon name={getHealthTipIcon(tip.category, tip.title)} size={20} color={theme.colors.primary} />
                     <HealthTipContent>
                       <HealthTipTitle>{tip.title}</HealthTipTitle>
                       <HealthTipDescription>{tip.description}</HealthTipDescription>

@@ -7,6 +7,8 @@ import { useAuthStore } from '../store/authStore';
 import LinearGradient from 'react-native-linear-gradient';
 import { GET_COURSES } from '../graphql/queries';
 import { useQuery } from '@apollo/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const levels = ['Beginner', 'Intermediate', 'Advanced'];
 
@@ -23,16 +25,31 @@ const CoursesScreen: React.FC = () => {
     fetchPolicy: 'cache-and-network',
   });
 
+  const getCourseCompletedKey = (courseId: string) => `course-completed-${courseId}`;
+
+const markCompletedCourses = async (courses: any[]) => {
+  const entries = await Promise.all(
+    courses.map(async (course) => {
+      const completed = await AsyncStorage.getItem(getCourseCompletedKey(course.id));
+      return { ...course, completed: completed === 'true' };
+    })
+  );
+  return entries;
+};
+
   // Filter courses by user goal when data or user changes
-  useEffect(() => {
+useEffect(() => {
+  const updateCourses = async () => {
     if (user && data?.getCourses) {
-      setFilteredCourses(
-        data.getCourses.filter((course: any) => course.goal === user.fitnessGoal)
-      );
+      const filtered = data.getCourses.filter((course: any) => course.goal === user.fitnessGoal);
+      const withCompleted = await markCompletedCourses(filtered);
+      setFilteredCourses(withCompleted);
     } else {
       setFilteredCourses([]);
     }
-  }, [data, user]);
+  };
+  updateCourses();
+}, [data, user]);
 
   // Pull to refresh handler
   const onRefresh = useCallback(async () => {
@@ -132,6 +149,7 @@ const CoursesScreen: React.FC = () => {
                     key={course.id}
                     activeOpacity={0.85}
                     onPress={() => navigation.navigate('CourseDetail', { course })}
+                    style={course.completed ? { opacity: 0.6 } : {}}
                   >
                     {course.coverImage && (
                       <CourseImage source={{ uri: course.coverImage }} />
@@ -140,6 +158,11 @@ const CoursesScreen: React.FC = () => {
                       <CourseTitle>{course.title}</CourseTitle>
                       <CourseDesc numberOfLines={2}>{course.description}</CourseDesc>
                     </CourseInfo>
+                    {course.completed && (
+                      <CompletedIconContainer>
+                        <Icon name="check-circle" size={20} color={theme.colors.primary} />
+                      </CompletedIconContainer>
+                    )}
                   </CourseCard>
                 ))}
               </LevelSection>
@@ -192,6 +215,7 @@ const CourseCard = styled.TouchableOpacity`
   shadow-opacity: 0.04;
   shadow-radius: 4px;
   shadow-offset: 0px 1px;
+  position: relative;
 `;
 
 const CourseImage = styled.Image`
@@ -222,6 +246,16 @@ const EmptyText = styled.Text`
   margin: 40px 0;
   color: ${({ theme }) => theme.colors.secondaryText};
   font-size: 15px;
+`;
+
+const CompletedIconContainer = styled.View`
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 1px 2px;
+  elevation: 2;
 `;
 
 export default CoursesScreen;

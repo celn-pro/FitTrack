@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, RefreshControl, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { Course } from '../constants';
@@ -7,10 +7,14 @@ import { WebView } from 'react-native-webview';
 import styled, { useTheme } from 'styled-components/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // <-- Add this import
 
 type RouteParams = { course: Course };
 
 const motivationalMsg = "Progress is personal—come back anytime and mark steps as complete when you're ready!";
+
+// Helper to get storage key for a course
+const getCourseCompletedKey = (courseId: string) => `course-completed-${courseId}`;
 
 const CourseDetailScreen: React.FC = () => {
   const route = useRoute<RouteProp<{ params: RouteParams }, 'params'>>();
@@ -20,6 +24,30 @@ const CourseDetailScreen: React.FC = () => {
 
   const [completed, setCompleted] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Load completed state from AsyncStorage
+  useEffect(() => {
+    const loadCompleted = async () => {
+      try {
+        const value = await AsyncStorage.getItem(getCourseCompletedKey(course.id));
+        setCompleted(value === 'true');
+      } catch (e) {
+        // handle error if needed
+      }
+    };
+    loadCompleted();
+  }, [course.id]);
+
+  // Toggle and store completed state
+  const toggleCompleted = async () => {
+    try {
+      const newCompleted = !completed;
+      setCompleted(newCompleted);
+      await AsyncStorage.setItem(getCourseCompletedKey(course.id), newCompleted ? 'true' : 'false');
+    } catch (e) {
+      // handle error if needed
+    }
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -78,7 +106,7 @@ const CourseDetailScreen: React.FC = () => {
         {/* Top Mark as Completed */}
         <MarkCompletedBtn
           completed={completed}
-          onPress={() => setCompleted((prev) => !prev)}
+          onPress={toggleCompleted}
         >
           <MarkCompletedText completed={completed}>
             {completed ? 'Course Completed ✓' : 'Mark Course as Completed'}
@@ -134,7 +162,7 @@ const CourseDetailScreen: React.FC = () => {
         {/* Bottom Mark as Completed */}
         <MarkCompletedBtn
           completed={completed}
-          onPress={() => setCompleted((prev) => !prev)}
+          onPress={toggleCompleted}
           style={{ marginTop: 16, marginBottom: 32 }}
         >
           <MarkCompletedText completed={completed}>

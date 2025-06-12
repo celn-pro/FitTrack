@@ -61,10 +61,10 @@ const MainTabs: React.FC = () => {
   >
     <Tab.Screen name="Home" component={Home} options={{ headerShown: false }} />
     <Tab.Screen name="Tracking" component={ActivityTracking} options={{ headerShown: false }} />
+    <Tab.Screen name="Social" component={SocialFeed} options={{ headerShown: false }} />
     <Tab.Screen name="Courses" component={CoursesScreen} options={{ headerShown: false }} />
     <Tab.Screen name="Profile" component={Profile} options={{ headerShown: false }} />
-    <Tab.Screen name="Social" component={SocialFeed} options={{ headerShown: false }} />
-    <Tab.Screen name="Settings" component={Settings} options={{ headerShown: false }} />
+    {/* <Tab.Screen name="Settings" component={Settings} options={{ headerShown: false }} /> */}
   </Tab.Navigator>
   )
 };

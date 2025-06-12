@@ -2,7 +2,7 @@ import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/clien
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import { useAuthStore } from '../store/authStore';
-import { API_BASE_URL, BASE_URL } from '@env';
+import { API_BASE_URL } from '../utils/env';
 
 
 // Replace with your actual GraphQL endpoint

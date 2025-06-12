@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Alert, Animated, TouchableOpacity, Dimensions, View } from 'react-native';
+import { Alert, Animated, TouchableOpacity, Dimensions, View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -290,20 +290,20 @@ const isLastStepComplete = () => {
         {errors.activityLevel && <ErrorText>{errors.activityLevel}</ErrorText>}
       </PickerContainer>
       <CheckboxContainer>
-        <Label>Preferred Workout Types</Label>
-        {['Strength', 'Cardio', 'Yoga', 'HIIT', 'Pilates'].map((type) => (
-          <CheckboxRow key={type}>
-            <Checkbox
-              onPress={() => toggleCheckbox(type, preferredWorkoutTypes, setPreferredWorkoutTypes)}
-            >
-              {preferredWorkoutTypes.includes(type) && (
-                <Icon name="check" size={16} color={theme.colors.primary} />
-              )}
-            </Checkbox>
-            <CheckboxText>{type}</CheckboxText>
-          </CheckboxRow>
-        ))}
-      </CheckboxContainer>
+      <Label>Preferred Workout Types</Label>
+      {['Strength', 'Cardio', 'Yoga', 'HIIT', 'Pilates'].map((type) => (
+        <CheckboxRow key={type}>
+          <Checkbox
+            onPress={() => toggleCheckbox(type, preferredWorkoutTypes, setPreferredWorkoutTypes)}
+          >
+            {preferredWorkoutTypes.includes(type) && (
+              <Icon name="check" size={16} color={theme.colors.primary} />
+            )}
+          </Checkbox>
+          <CheckboxText>{type}</CheckboxText>
+        </CheckboxRow>
+      ))}
+    </CheckboxContainer>
     </FormContainer>,
 
     // Step 3: Health & Finish
@@ -312,35 +312,35 @@ const isLastStepComplete = () => {
   <Subtitle>Almost done!</Subtitle>
   {renderProgress()}
   <CheckboxContainer>
-    <Label>Health Conditions</Label>
-    {['None', 'Diabetes', 'Hypertension', 'Heart Condition', 'Knee Injury', 'Back Pain', 'Asthma'].map((condition) => (
-      <CheckboxRow key={condition}>
-        <Checkbox
-          onPress={() => toggleCheckbox(condition, healthConditions, setHealthConditions)}
-        >
-          {healthConditions.includes(condition) && (
-            <Icon name="check" size={16} color={theme.colors.primary} />
-          )}
-        </Checkbox>
-        <CheckboxText>{condition}</CheckboxText>
-      </CheckboxRow>
-    ))}
+  <Label>Health Conditions</Label>
+  {['None', 'Diabetes', 'Hypertension', 'Heart Condition', 'Knee Injury', 'Back Pain', 'Asthma'].map((condition) => (
+    <CheckboxRow key={condition}>
+      <Checkbox
+        onPress={() => toggleCheckbox(condition, healthConditions, setHealthConditions)}
+      >
+        {healthConditions.includes(condition) && (
+          <Icon name="check" size={16} color={theme.colors.primary} />
+        )}
+      </Checkbox>
+      <CheckboxText>{condition}</CheckboxText>
+    </CheckboxRow>
+  ))}
   </CheckboxContainer>
   <CheckboxContainer>
-    <Label>Dietary Restrictions</Label>
-    {['None', 'Peanuts', 'Dairy', 'Gluten', 'Shellfish', 'Soy'].map((restriction) => (
-      <CheckboxRow key={restriction}>
-        <Checkbox
-          onPress={() => toggleCheckbox(restriction, dietaryRestrictions, setDietaryRestrictions)}
-        >
-          {dietaryRestrictions.includes(restriction) && (
-            <Icon name="check" size={16} color={theme.colors.primary} />
-          )}
-        </Checkbox>
-        <CheckboxText>{restriction}</CheckboxText>
-      </CheckboxRow>
-    ))}
-  </CheckboxContainer>
+  <Label>Dietary Restrictions</Label>
+  {['None', 'Peanuts', 'Dairy', 'Gluten', 'Shellfish', 'Soy'].map((restriction) => (
+    <CheckboxRow key={restriction}>
+      <Checkbox
+        onPress={() => toggleCheckbox(restriction, dietaryRestrictions, setDietaryRestrictions)}
+      >
+        {dietaryRestrictions.includes(restriction) && (
+          <Icon name="check" size={16} color={theme.colors.primary} />
+        )}
+      </Checkbox>
+      <CheckboxText>{restriction}</CheckboxText>
+    </CheckboxRow>
+  ))}
+</CheckboxContainer>
 </FormContainer>
   ];
 
@@ -364,51 +364,62 @@ const isLastStepComplete = () => {
           Step {step + 1} of {steps.length}: {steps[step]}
         </Subtitle>
       </LinearGradient>
-      <CenteredContainer>
-  {StepScreens[step]}
-</CenteredContainer>
-<ButtonContainer>
-  {step > 0 && (
-    <SecondaryButton onPress={handleBack} disabled={loading}>
-      <SecondaryButtonText>Back</SecondaryButtonText>
-    </SecondaryButton>
-  )}
-  {step < StepScreens.length - 1 ? (
-    <PrimaryButtonContainer>
-      <LinearGradient
-        colors={[theme.colors.primary, theme.colors.secondary]}
-        style={{ borderRadius: 10 }}
+      <KeyboardAvoidingView
+        style={{ flex: 1, width: '100%' }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
-        <TouchableOpacity
-          onPress={handleNext}
-          disabled={loading}
-          style={{ width: '100%', alignItems: 'center', padding: 12 }}
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-start', paddingBottom: 24 }}
+          keyboardShouldPersistTaps="handled"
         >
-          <PrimaryButtonText>
-            Next
-          </PrimaryButtonText>
-        </TouchableOpacity>
-      </LinearGradient>
-    </PrimaryButtonContainer>
-  ) : (
-    <PrimaryButtonContainer>
-      <LinearGradient
-        colors={[theme.colors.primary, theme.colors.secondary]}
-        style={{ borderRadius: 10 }}
-      >
-        <TouchableOpacity
-          onPress={isLastStepComplete() ? handleSubmit : () => navigation.navigate('Home')}
-          disabled={loading}
-          style={{ width: '100%', alignItems: 'center', padding: 12 }}
-        >
-          <PrimaryButtonText>
-            {isLastStepComplete() ? (loading ? 'Completing...' : 'Complete Profile') : 'Skip for Now'}
-          </PrimaryButtonText>
-        </TouchableOpacity>
-      </LinearGradient>
-    </PrimaryButtonContainer>
-  )}
-</ButtonContainer>
+          <CenteredContainer>
+            {StepScreens[step]}
+          </CenteredContainer>
+        </ScrollView>
+        <ButtonContainer>
+          {step > 0 && (
+            <SecondaryButton onPress={handleBack} disabled={loading}>
+              <SecondaryButtonText>Back</SecondaryButtonText>
+            </SecondaryButton>
+          )}
+          {step < StepScreens.length - 1 ? (
+            <PrimaryButtonContainer>
+              <LinearGradient
+                colors={[theme.colors.primary, theme.colors.secondary]}
+                style={{ borderRadius: 10 }}
+              >
+                <TouchableOpacity
+                  onPress={handleNext}
+                  disabled={loading}
+                  style={{ width: '100%', alignItems: 'center', padding: 12 }}
+                >
+                  <PrimaryButtonText>
+                    Next
+                  </PrimaryButtonText>
+                </TouchableOpacity>
+              </LinearGradient>
+            </PrimaryButtonContainer>
+          ) : (
+            <PrimaryButtonContainer>
+              <LinearGradient
+                colors={[theme.colors.primary, theme.colors.secondary]}
+                style={{ borderRadius: 10 }}
+              >
+                <TouchableOpacity
+                  onPress={isLastStepComplete() ? handleSubmit : () => navigation.navigate('Home')}
+                  disabled={loading}
+                  style={{ width: '100%', alignItems: 'center', padding: 12 }}
+                >
+                  <PrimaryButtonText>
+                    {isLastStepComplete() ? (loading ? 'Completing...' : 'Complete Profile') : 'Skip for Now'}
+                  </PrimaryButtonText>
+                </TouchableOpacity>
+              </LinearGradient>
+            </PrimaryButtonContainer>
+          )}
+        </ButtonContainer>
+      </KeyboardAvoidingView>
     </Container>
   );
 };
@@ -557,8 +568,8 @@ const ProgressLine = styled.View<{ completed: boolean }>`
 const ButtonContainer = styled.View`
   flex-direction: row;
   justify-content: space-between;
-  margin-bottom: 6px;
-  margin-top: 8px;
+  margin-bottom: 25px;
+  margin-top: 15px;
   width: 100%;
   max-width: 400px; 
   align-self: center; 
@@ -609,5 +620,47 @@ const ErrorText = styled.Text`
   margin-top: -12px;
   padding-left: 4px;
 `;
+
+// ...existing code...
+
+const PillRow = styled.View`
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+`;
+
+const Pill = styled(TouchableOpacity)<{ selected: boolean }>`
+  padding: 4px 10px; 
+  border-radius: 14px; 
+  background-color: ${({ selected, theme }) =>
+    selected ? theme.colors.primary : theme.colors.background === '#1C2526'
+      ? 'rgba(255,255,255,0.08)'
+      : '#F0F0F0'};
+  border: 1px solid ${({ selected, theme }) =>
+    selected ? theme.colors.primary : theme.colors.secondaryText};
+  margin-bottom: 4px;
+`;
+
+const PillText = styled.Text<{ selected: boolean }>`
+  font-family: ${(props) => props.theme.typography.fontFamily.semiBold};
+  font-size: ${(props) => props.theme.typography.fontSize.xsmall || 12}px; 
+  color: ${({ selected, theme }) =>
+    selected ? theme.colors.white : theme.colors.text};
+`;
+
+const CheckboxGrid = styled.View`
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+`;
+
+const CheckboxGridItem = styled.View`
+  width: 48%;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 8px;
+`;
+
 
 export default ProfileSetup;
