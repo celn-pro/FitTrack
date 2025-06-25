@@ -26,6 +26,7 @@ import { RootStackParamList } from '../navigation/types';
 
 // Use a simple picker for dropdown (replace with your preferred dropdown)
 import { Picker } from '@react-native-picker/picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -69,6 +70,7 @@ const SocialFeed: React.FC = () => {
   const theme = useTheme();
   const { user } = useAuthStore();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
 
   const [refreshing, setRefreshing] = useState(false);
   const [likeLoading, setLikeLoading] = useState<string | null>(null);
@@ -235,7 +237,7 @@ const handleSubmitPost = async () => {
   }
 
   return (
-    <Container>
+    <Container style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <LinearGradient
         colors={[theme.colors.primary, theme.colors.secondary]}
         start={{ x: 0, y: 0 }}
@@ -495,9 +497,30 @@ const handleSubmitPost = async () => {
 
 // ...styled components and helpers remain unchanged...
 // --- Helpers ---
-function formatDate(dateStr: string) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+function formatDate(dateInput: string | number) {
+  let date: Date;
+
+  // If it's a number or a string that looks like a number, treat as timestamp
+  if (
+    typeof dateInput === 'number' ||
+    (typeof dateInput === 'string' && /^\d+$/.test(dateInput))
+  ) {
+    date = new Date(Number(dateInput));
+  } else {
+    date = new Date(dateInput);
+  }
+
+  if (isNaN(date.getTime())) {
+    return String(dateInput); // fallback: show raw value if parsing fails
+  }
+
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function getActivityIcon(type?: string) {
@@ -806,8 +829,8 @@ const styles = StyleSheet.create({
   headerGradient: {
     padding: 18,
     paddingTop: 38,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    // borderBottomLeftRadius: 20,
+    // borderBottomRightRadius: 20,
     marginBottom: 8,
     elevation: 2,
   },

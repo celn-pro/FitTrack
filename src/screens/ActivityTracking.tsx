@@ -8,6 +8,7 @@ import { COLORS } from '../styles/colors';
 import AppleHealthKit, { HealthKitPermissions, HealthValue } from 'react-native-health';
 import GoogleFit, { Scopes as GoogleFitScopes } from 'react-native-google-fit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const mockMetrics = {
   stepsGoal: 10000,
@@ -50,6 +51,7 @@ const ActivityTracking: React.FC = () => {
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [inputModal, setInputModal] = useState<{ visible: boolean, type: string | null }>({ visible: false, type: null });
   const [inputValue, setInputValue] = useState('');
+  const insets = useSafeAreaInsets();
 
   // Fetch steps from HealthKit or Google Fit
   const fetchSteps = async () => {
@@ -201,7 +203,7 @@ const ActivityTracking: React.FC = () => {
     Math.min(100, Math.round((value / goal) * 100));
 
   return (
-    <Container>
+    <Container style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <ScrollView
         refreshControl={
           <RefreshControl
@@ -507,8 +509,8 @@ const styles = StyleSheet.create({
   headerGradient: {
     padding: 18,
     paddingTop: 38,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    // borderBottomLeftRadius: 20,
+    // borderBottomRightRadius: 20,
     marginBottom: 8,
     elevation: 2,
   },

@@ -4,8 +4,8 @@ buildscript {
     ext {
         buildToolsVersion = "34.0.0" // Revert to 34
         minSdkVersion = 24           // Common and safe minimum for RN 0.79.1
-        compileSdkVersion = 34       // Revert to 34 (official for RN 0.79.1)
-        targetSdkVersion = 34        // Revert to 34 (official for RN 0.79.1)
+        compileSdkVersion = 35       // Revert to 34 (official for RN 0.79.1)
+        targetSdkVersion = 35        // Revert to 34 (official for RN 0.79.1)
         ndkVersion = "27.1.12297006"  // Revert to NDK 25, which is common for RN 0.79.1
         kotlinVersion = "1.8.0"      // Revert to 1.8.0, often paired with RN 0.7x
     }

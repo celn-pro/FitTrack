@@ -26,6 +26,7 @@ import { DID_YOU_KNOW, HEALTH_TIPS, HYDRATION_RECOMMENDATIONS, HydrationRecommen
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { getHealthTipIcon } from '../utils/getHealthTipIcon';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -82,6 +83,8 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
   const [selectedHealthTip, setSelectedHealthTip] = useState<HealthTip | null>(null);
   const [showDidYouKnowModal, setShowDidYouKnowModal] = useState(false);
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
+
+  const insets = useSafeAreaInsets();
 
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
@@ -173,6 +176,7 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
   const { loading: loadingTips, error: errorTips, data: dataTips, refetch: refetchTips } = useQuery(GET_HEALTH_TIPS);
 
   const { loading: loadingDidYouKnow, error: errorDidYouKnow, data: dataDidYouKnow, refetch: refetchDidYouKnow } = useQuery(GET_DID_YOU_KNOW);
+
 
 
   useSubscription(ON_RECOMMENDATION_UPDATE, {
@@ -450,7 +454,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
   }
 
   return (
-    <Container>
+    <Container style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -480,7 +484,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
                 </MoodPromptContainer>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
               onPress={toggleTheme}
               style={styles.themeToggle}
             >
@@ -489,7 +493,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
                 size={24}
                 color={theme.colors.white}
               />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </HeaderContent>
           
           {/* Streak Counter */}
@@ -970,8 +974,8 @@ const styles = StyleSheet.create({
   headerGradient: {
     padding: 15,
     paddingTop: 35,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    // borderBottomLeftRadius: 20,
+    // borderBottomRightRadius: 20,
   },
   themeToggle: {
     padding: 6,

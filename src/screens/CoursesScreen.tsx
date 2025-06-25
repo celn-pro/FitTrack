@@ -9,6 +9,7 @@ import { GET_COURSES } from '../graphql/queries';
 import { useQuery } from '@apollo/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const levels = ['Beginner', 'Intermediate', 'Advanced'];
 
@@ -20,6 +21,7 @@ const CoursesScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [filteredCourses, setFilteredCourses] = useState<any[]>([]);
 
+  const insets = useSafeAreaInsets();
   // Always fetch from network on refresh for up-to-date data
   const { loading, error, data, refetch } = useQuery(GET_COURSES, {
     fetchPolicy: 'cache-and-network',
@@ -90,15 +92,15 @@ useEffect(() => {
   }
 
   return (
-    <Container>
+    <Container style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <LinearGradient
         colors={[theme.colors.primary, theme.colors.secondary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{
-          borderBottomLeftRadius: 20,
-          borderBottomRightRadius: 20,
-          margin: 18,
+          // borderBottomLeftRadius: 20,
+          // borderBottomRightRadius: 20,
+          // margin: 18,
           marginBottom: 8,
           padding: 18,
           paddingBottom: 14,

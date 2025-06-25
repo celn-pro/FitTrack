@@ -7,11 +7,13 @@ import { useAuthStore, authUtils } from '../store/authStore';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../navigation/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Profile: React.FC = () => {
   const theme = useTheme();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { user, logout } = useAuthStore();
+  const insets = useSafeAreaInsets();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -55,7 +57,7 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <Container>
+    <Container style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <LinearGradient
         colors={[theme.colors.primary, theme.colors.secondary]}
         start={{ x: 0, y: 0 }}
@@ -261,8 +263,8 @@ const styles = StyleSheet.create({
   headerGradient: {
     padding: 18,
     paddingTop: 38,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    // borderBottomLeftRadius: 20,
+    // borderBottomRightRadius: 20,
     marginBottom: 8,
     elevation: 2,
   },

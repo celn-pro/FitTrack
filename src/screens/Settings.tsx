@@ -5,11 +5,14 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAuthStore } from '../store/authStore';
 import { useTheme as useAppTheme } from '../hooks/useTheme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Settings: React.FC = () => {
   const { theme, toggleTheme, isDark } = useAppTheme();
   const { user } = useAuthStore();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+
+  const insets = useSafeAreaInsets();
 
   const handleToggleNotifications = () => {
     setNotificationsEnabled((prev) => !prev);
@@ -32,7 +35,7 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <Container>
+    <Container style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <LinearGradient
         colors={[theme.colors.primary, theme.colors.secondary]}
         start={{ x: 0, y: 0 }}
@@ -133,8 +136,8 @@ const styles = StyleSheet.create({
   headerGradient: {
     padding: 18,
     paddingTop: 38,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    // borderBottomLeftRadius: 20,
+    // borderBottomRightRadius: 20,
     marginBottom: 8,
     elevation: 2,
   },
