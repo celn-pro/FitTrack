@@ -4,6 +4,7 @@ import styled, { useTheme } from 'styled-components/native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import { getHealthTipIcon } from '../utils/getHealthTipIcon';
 import { HealthTip } from '../constants';
 
 const HealthTipDetailScreen: React.FC = () => {
@@ -38,12 +39,21 @@ const HealthTipDetailScreen: React.FC = () => {
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
         <AnimatedCard style={{ opacity: fadeAnim }}>
           <IconCircle>
-            <Icon name={tip.icon || "favorite"} size={38} color={theme.colors.primary} />
+            <Icon name={getHealthTipIcon(tip.category, tip.title)} size={38} color={theme.colors.primary} />
           </IconCircle>
-          {tip.image && <CoverImage source={{ uri: tip.image }} />}
           <Title>{tip.title}</Title>
           <Category>{tip.category.toUpperCase()}</Category>
-          <Description>{tip.description}</Description>
+          <MetaInfo>
+            <MetaItem>
+              <Icon name="trending-up" size={16} color={theme.colors.accent} />
+              <MetaText>Difficulty: {tip.difficulty}</MetaText>
+            </MetaItem>
+            <MetaItem>
+              <Icon name="schedule" size={16} color={theme.colors.accent} />
+              <MetaText>Read time: {tip.estimatedReadTime} min</MetaText>
+            </MetaItem>
+          </MetaInfo>
+          <Description>{tip.content}</Description>
           {tip.link && (
             <LearnMoreButton onPress={() => Linking.openURL(tip.link!)}>
               <LearnMoreGradient
@@ -148,6 +158,27 @@ const LearnMoreText = styled.Text`
   color: #fff;
   font-weight: bold;
   font-size: 16px;
+`;
+
+const MetaInfo = styled.View`
+  flex-direction: row;
+  justify-content: space-around;
+  margin: 16px 0;
+  padding: 12px;
+  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#2A3439' : '#F8F9FA'};
+  border-radius: 12px;
+`;
+
+const MetaItem = styled.View`
+  flex-direction: row;
+  align-items: center;
+`;
+
+const MetaText = styled.Text`
+  color: ${({ theme }) => theme.colors.text};
+  font-size: 13px;
+  margin-left: 6px;
+  font-weight: 500;
 `;
 
 export default HealthTipDetailScreen;

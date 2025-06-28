@@ -27,26 +27,40 @@ import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { getHealthTipIcon } from '../utils/getHealthTipIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Recommendation } from '../types/types';
 
 const { width } = Dimensions.get('window');
 
-interface Recommendation {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  category: string;
-  priority: number;
-  media?: string;
-  frequency: string;
-}
+
 
 interface HealthTip {
   id: string;
   title: string;
-  description: string;
+  content: string;
   category: 'nutrition' | 'exercise' | 'sleep' | 'mental' | 'hydration';
-  icon: string;
+  difficulty: string;
+  estimatedReadTime: number;
+}
+
+interface DailyHealthTips {
+  date: string;
+  tips: HealthTip[];
+}
+
+interface DidYouKnowFact {
+  id: string;
+  fact: string;
+  category: string;
+  source: string;
+  difficulty: string;
+  estimatedReadTime: number;
+  isVerified: boolean;
+}
+
+interface DailyDidYouKnowFacts {
+  date: string;
+  totalFacts: number;
+  facts: DidYouKnowFact[];
 }
 
 const MOODS = [
@@ -69,7 +83,7 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [healthTips, setHealthTips] = useState<HealthTip[]>([])
-  const [didYouKnow, setDidYouKnow] = useState<any[]>([]);
+  const [didYouKnow, setDidYouKnow] = useState<DidYouKnowFact[]>([]);
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const [currentDidYouKnowIndex, setCurrentDidYouKnowIndex] = useState(0);
@@ -91,16 +105,45 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
   const tipScrollRef = useRef<ScrollView>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  // For testing purposes, you can uncomment the following lines to use a smaller set of recommendations
-  // const combinedRecommendations = [
-  //   ...WORKOUTS.slice(0, 1),
-  //   ...NUTRITION_RECOMMENDATIONS.slice(0, 1),
-  //   ...HYDRATION_RECOMMENDATIONS.slice(0, 1),
-  //   ...REST_RECOMMENDATIONS.slice(0, 1),
-  // ];
-
   // Helper to get today's date string
   const getToday = () => new Date().toISOString().split('T')[0];
+
+  // Utility function to sanitize recommendation data
+  const sanitizeRecommendations = (recommendations: Recommendation[]): Recommendation[] => {
+    return recommendations.map(rec => {
+      if (rec.macros) {
+        // Clean up any NaN values in macros
+        const cleanMacros = { ...rec.macros };
+
+        if (cleanMacros.protein) {
+          cleanMacros.protein = {
+            ...cleanMacros.protein,
+            grams: isNaN(cleanMacros.protein.grams as any) ? null : cleanMacros.protein.grams,
+            calories: isNaN(cleanMacros.protein.calories as any) ? null : cleanMacros.protein.calories,
+          };
+        }
+
+        if (cleanMacros.carbohydrates) {
+          cleanMacros.carbohydrates = {
+            ...cleanMacros.carbohydrates,
+            grams: isNaN(cleanMacros.carbohydrates.grams as any) ? null : cleanMacros.carbohydrates.grams,
+            calories: isNaN(cleanMacros.carbohydrates.calories as any) ? null : cleanMacros.carbohydrates.calories,
+          };
+        }
+
+        if (cleanMacros.fats) {
+          cleanMacros.fats = {
+            ...cleanMacros.fats,
+            grams: isNaN(cleanMacros.fats.grams as any) ? null : cleanMacros.fats.grams,
+            calories: isNaN(cleanMacros.fats.calories as any) ? null : cleanMacros.fats.calories,
+          };
+        }
+
+        return { ...rec, macros: cleanMacros };
+      }
+      return rec;
+    });
+  };
 
 
   // Auto-scroll health tips
@@ -170,7 +213,23 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
   }, []);
 
   // Fetch recommendations
-  const { loading: loadingRecs, error: errorRecs, data: dataRecs, refetch: refetchRecs } = useQuery(GET_RECOMMENDATIONS);
+  const { loading: loadingRecs, error: errorRecs, data: dataRecs, refetch: refetchRecs } = useQuery(GET_RECOMMENDATIONS, {
+    variables: {
+      filter: {
+        // Add any filter criteria here if needed
+        // For now, we'll fetch all recommendations
+      }
+    },
+    errorPolicy: 'all', // Return partial data even if there are errors
+    onError: (error) => {
+      console.error('GraphQL Error:', error);
+      // Log specific details about macro errors
+      if (error.message.includes('macro') || error.message.includes('calories') || error.message.includes('NaN')) {
+        console.error('Macro calculation error detected. Backend should return null instead of NaN for missing calorie values.');
+        console.error('Error details:', error.graphQLErrors);
+      }
+    },
+  });
 
   // Fetch health tips
   const { loading: loadingTips, error: errorTips, data: dataTips, refetch: refetchTips } = useQuery(GET_HEALTH_TIPS);
@@ -204,8 +263,14 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
         try {
           const { data } = await refetchRecs();
           if (data?.getRecommendations) {
-            setRecommendations(data.getRecommendations);
-            await AsyncStorage.setItem('recommendations', JSON.stringify(data.getRecommendations));
+            // Add fallback for missing createdAt and sanitize macros
+            const recommendationsWithDefaults = data.getRecommendations.map((rec: any) => ({
+              ...rec,
+              createdAt: rec.createdAt || new Date().toISOString()
+            }));
+            const sanitizedRecs = sanitizeRecommendations(recommendationsWithDefaults);
+            setRecommendations(sanitizedRecs);
+            await AsyncStorage.setItem('recommendations', JSON.stringify(sanitizedRecs));
             await AsyncStorage.setItem('recommendationsDate', today);
           }
         } catch (error) {
@@ -224,9 +289,9 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
     } else {
       try {
         const { data } = await refetchTips();
-        if (data?.getHealthTips) {
-          setHealthTips(data.getHealthTips);
-          await AsyncStorage.setItem('healthTips', JSON.stringify(data.getHealthTips));
+        if (data?.getDailyHealthTips?.tips) {
+          setHealthTips(data.getDailyHealthTips.tips);
+          await AsyncStorage.setItem('healthTips', JSON.stringify(data.getDailyHealthTips.tips));
           await AsyncStorage.setItem('healthTipsDate', today);
         }
       } catch (error) {
@@ -245,10 +310,10 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
       } else {
         try {
           const { data } = await refetchDidYouKnow();
-          if (data?.getDidYouKnow) {
-          setDidYouKnow(data.getDidYouKnow);
+          if (data?.getDailyDidYouKnowFacts?.facts) {
+          setDidYouKnow(data.getDailyDidYouKnowFacts.facts);
           setCurrentDidYouKnowIndex(0); // Reset index!
-          await AsyncStorage.setItem('didYouKnow', JSON.stringify(data.getDidYouKnow));
+          await AsyncStorage.setItem('didYouKnow', JSON.stringify(data.getDailyDidYouKnowFacts.facts));
           await AsyncStorage.setItem('didYouKnowDate', today);
 }
         } catch (error) {
@@ -291,22 +356,28 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
     // Recommendations
     const { data: recData } = await refetchRecs();
     if (recData?.getRecommendations) {
-      setRecommendations(recData.getRecommendations);
-      await AsyncStorage.setItem('recommendations', JSON.stringify(recData.getRecommendations));
+      // Add fallback for missing createdAt and sanitize macros
+      const recommendationsWithDefaults = recData.getRecommendations.map((rec: any) => ({
+        ...rec,
+        createdAt: rec.createdAt || new Date().toISOString()
+      }));
+      const sanitizedRecs = sanitizeRecommendations(recommendationsWithDefaults);
+      setRecommendations(sanitizedRecs);
+      await AsyncStorage.setItem('recommendations', JSON.stringify(sanitizedRecs));
       await AsyncStorage.setItem('recommendationsDate', getToday());
     }
     // Health Tips
     const { data: tipsData } = await refetchTips();
-    if (tipsData?.getHealthTips) {
-      setHealthTips(tipsData.getHealthTips);
-      await AsyncStorage.setItem('healthTips', JSON.stringify(tipsData.getHealthTips));
+    if (tipsData?.getDailyHealthTips?.tips) {
+      setHealthTips(tipsData.getDailyHealthTips.tips);
+      await AsyncStorage.setItem('healthTips', JSON.stringify(tipsData.getDailyHealthTips.tips));
       await AsyncStorage.setItem('healthTipsDate', getToday());
     }
     // Did You Know
     const { data: didYouKnowData } = await refetchDidYouKnow();
-    if (didYouKnowData?.getDidYouKnow) {
-      setDidYouKnow(didYouKnowData.getDidYouKnow);
-      await AsyncStorage.setItem('didYouKnow', JSON.stringify(didYouKnowData.getDidYouKnow));
+    if (didYouKnowData?.getDailyDidYouKnowFacts?.facts) {
+      setDidYouKnow(didYouKnowData.getDailyDidYouKnowFacts.facts);
+      await AsyncStorage.setItem('didYouKnow', JSON.stringify(didYouKnowData.getDailyDidYouKnowFacts.facts));
       await AsyncStorage.setItem('didYouKnowDate', getToday());
     }
   } catch (error) {
@@ -362,7 +433,7 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
   }
 };
 
- const renderCompactRecommendation = ({ item }: { item: any }) => (
+ const renderCompactRecommendation = ({ item }: { item: Recommendation }) => (
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={() => {
@@ -380,7 +451,7 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
       style={{ marginBottom: 14 }}
     >
       <LinearGradient
-        colors={theme.colors.background === COLORS.darkBackground 
+        colors={theme.colors.background === COLORS.darkBackground
           ? ['#232B34', '#2A3439']
           : ['#F8F9FA', '#E6F0FA']}
         style={[
@@ -411,10 +482,36 @@ const { theme, toggleTheme, isDark, themeName } = useTheme();
           <Text style={[styles.compactDescription, { color: theme.colors.secondaryText }]} numberOfLines={3}>
             {item.description}
           </Text>
+          {/* Display additional info based on category */}
+          {item.category === 'nutrition' && (item.calories || item.calculatedCalories) && (
+            <Text style={[styles.compactMeta, { color: theme.colors.accent }]}>
+              {item.calculatedCalories || item.calories} calories
+            </Text>
+          )}
+          {item.category === 'workout' && item.calculatedCalories && (
+            <Text style={[styles.compactMeta, { color: theme.colors.accent }]}>
+              Burns ~{item.calculatedCalories} calories
+            </Text>
+          )}
+          {item.category === 'hydration' && item.dailyGoalMl && (
+            <Text style={[styles.compactMeta, { color: theme.colors.accent }]}>
+              Goal: {item.dailyGoalMl}ml daily
+            </Text>
+          )}
+          {item.category === 'rest' && item.sleepGoalHours && (
+            <Text style={[styles.compactMeta, { color: theme.colors.accent }]}>
+              {item.sleepGoalHours} hours sleep
+            </Text>
+          )}
+          {item.estimatedDuration && (
+            <Text style={[styles.compactMeta, { color: theme.colors.accent }]}>
+              {item.estimatedDuration} min
+            </Text>
+          )}
         </View>
-        {item.media && (
+        {item.image && (
           <FastImage
-            source={{ uri: item.media }}
+            source={{ uri: item.image }}
             style={styles.compactImage}
             resizeMode={FastImage.resizeMode.cover}
           />
@@ -429,7 +526,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
     onPress={() => navigation.navigate('HealthTipDetail', { tip: item })}
   >
     <LinearGradient
-      colors={theme.colors.background === COLORS.darkBackground 
+      colors={theme.colors.background === COLORS.darkBackground
         ? ['#2A3439', '#2F3B41']
         : ['#FFFFFF', '#F8F9FA']}
       style={styles.healthTipGradient}
@@ -438,7 +535,21 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
         <Icon name={getHealthTipIcon(item.category, item.title)} size={20} color={theme.colors.primary} />
         <HealthTipContent>
           <HealthTipTitle>{item.title}</HealthTipTitle>
-          <HealthTipDescription>{item.description}</HealthTipDescription>
+          <HealthTipDescription>{item.content}</HealthTipDescription>
+          <HealthTipMeta>
+            <HealthTipMetaItem>
+              <Icon name="trending-up" size={12} color={theme.colors.accent} />
+              <Text style={{ color: theme.colors.accent, fontSize: 11, marginLeft: 4 }}>
+                {item.difficulty}
+              </Text>
+            </HealthTipMetaItem>
+            <HealthTipMetaItem>
+              <Icon name="schedule" size={12} color={theme.colors.accent} />
+              <Text style={{ color: theme.colors.accent, fontSize: 11, marginLeft: 4 }}>
+                {item.estimatedReadTime} min
+              </Text>
+            </HealthTipMetaItem>
+          </HealthTipMeta>
         </HealthTipContent>
       </HealthTipCard>
     </LinearGradient>
@@ -475,7 +586,7 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
         >
           <HeaderContent>
             <View>
-              <HeaderTitle>Welcome Back, {user.name || 'User'}!</HeaderTitle>
+              <HeaderTitle>Welcome Back, {user.firstName || 'User'}!</HeaderTitle>
               <HeaderSubtitle>{getGoalSubtitle()}</HeaderSubtitle>
               <TouchableOpacity onPress={handleMoodClick}>
                 <MoodPromptContainer>
@@ -484,16 +595,6 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
                 </MoodPromptContainer>
               </TouchableOpacity>
             </View>
-            {/* <TouchableOpacity 
-              onPress={toggleTheme}
-              style={styles.themeToggle}
-            >
-              <Icon 
-                name={isDark ? 'dark-mode' : 'light-mode'}
-                size={24}
-                color={theme.colors.white}
-              />
-            </TouchableOpacity> */}
           </HeaderContent>
           
           {/* Streak Counter */}
@@ -561,6 +662,34 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
                       >
                         {didYouKnow[currentDidYouKnowIndex].fact}
                       </Text>
+                      <View style={styles.didYouKnowMeta}>
+                        <View style={styles.didYouKnowMetaItem}>
+                          <Icon name="category" size={12} color={theme.colors.accent} />
+                          <Text style={[styles.didYouKnowMetaText, { color: theme.colors.accent }]}>
+                            {didYouKnow[currentDidYouKnowIndex].category}
+                          </Text>
+                        </View>
+                        <View style={styles.didYouKnowMetaItem}>
+                          <Icon name="trending-up" size={12} color={theme.colors.accent} />
+                          <Text style={[styles.didYouKnowMetaText, { color: theme.colors.accent }]}>
+                            {didYouKnow[currentDidYouKnowIndex].difficulty}
+                          </Text>
+                        </View>
+                        <View style={styles.didYouKnowMetaItem}>
+                          <Icon name="schedule" size={12} color={theme.colors.accent} />
+                          <Text style={[styles.didYouKnowMetaText, { color: theme.colors.accent }]}>
+                            {didYouKnow[currentDidYouKnowIndex].estimatedReadTime} min
+                          </Text>
+                        </View>
+                        {didYouKnow[currentDidYouKnowIndex].isVerified && (
+                          <View style={styles.didYouKnowMetaItem}>
+                            <Icon name="verified" size={12} color="#4CAF50" />
+                            <Text style={[styles.didYouKnowMetaText, { color: '#4CAF50' }]}>
+                              Verified
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       <Text
                         style={[
                           styles.didYouKnowSource,
@@ -700,7 +829,21 @@ const renderHealthTip = ({ item }: { item: HealthTip }) => (
                     <Icon name={getHealthTipIcon(tip.category, tip.title)} size={20} color={theme.colors.primary} />
                     <HealthTipContent>
                       <HealthTipTitle>{tip.title}</HealthTipTitle>
-                      <HealthTipDescription>{tip.description}</HealthTipDescription>
+                      <HealthTipDescription>{tip.content}</HealthTipDescription>
+                      <HealthTipMeta>
+                        <HealthTipMetaItem>
+                          <Icon name="trending-up" size={12} color={theme.colors.accent} />
+                          <Text style={{ color: theme.colors.accent, fontSize: 11, marginLeft: 4 }}>
+                            {tip.difficulty}
+                          </Text>
+                        </HealthTipMetaItem>
+                        <HealthTipMetaItem>
+                          <Icon name="schedule" size={12} color={theme.colors.accent} />
+                          <Text style={{ color: theme.colors.accent, fontSize: 11, marginLeft: 4 }}>
+                            {tip.estimatedReadTime} min
+                          </Text>
+                        </HealthTipMetaItem>
+                      </HealthTipMeta>
                     </HealthTipContent>
                   </HealthTipCard>
                 </LinearGradient>
@@ -797,6 +940,17 @@ const HealthTipDescription = styled.Text`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.secondaryText};
   margin-top: 4px;
+`;
+
+const HealthTipMeta = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 8px;
+`;
+
+const HealthTipMetaItem = styled.View`
+  flex-direction: row;
+  align-items: center;
 `;
 
 const SectionContainer = styled.View`
@@ -1073,6 +1227,11 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 18,
   },
+  compactMeta: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 4,
+  },
   compactImage: {
     width: 60,
     height: 60,
@@ -1101,6 +1260,23 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontStyle: 'italic',
     color: '#666',
+  },
+  didYouKnowMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  didYouKnowMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+    marginBottom: 4,
+  },
+  didYouKnowMetaText: {
+    fontSize: 10,
+    marginLeft: 4,
+    fontWeight: '500',
   },
   suggestionText: {
     fontSize: 14,

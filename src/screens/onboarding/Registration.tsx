@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, Animated, TouchableOpacity, RefreshControl, Dimensions, Alert } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollView, Animated, TouchableOpacity, RefreshControl, Dimensions, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 import LinearGradient from 'react-native-linear-gradient';
@@ -13,7 +13,7 @@ import { RootStackParamList } from '../../navigation/types';
 
 type RegistrationNavigationProp = StackNavigationProp<RootStackParamList, 'OnboardingRegistration'>;
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { height: screenHeight } = Dimensions.get('window');
 
 const Container = styled(SafeAreaView)`
   flex: 1;
@@ -24,11 +24,13 @@ const Content = styled(ScrollView)`
   flex: 1;
 `;
 
-const CenteredContainer = styled.View`
-  min-height: ${screenHeight - 100}px;
+const CenteredContainer = styled.View<{ paddingTop: number; paddingBottom: number }>`
+  min-height: ${(props) => screenHeight - props.paddingTop - props.paddingBottom}px;
   justify-content: center;
   align-items: center;
   padding: 20px;
+  padding-top: ${(props) => Math.max(props.paddingTop + 20, 40)}px;
+  padding-bottom: ${(props) => Math.max(props.paddingBottom + 20, 40)}px;
 `;
 
 const FormContainer = styled.View`
@@ -171,13 +173,69 @@ const PasswordToggle = styled(TouchableOpacity)`
   padding: 4px;
 `;
 
+const GenderContainer = styled.View`
+  width: 100%;
+  margin-bottom: 16px;
+`;
+
+const GenderLabel = styled.Text`
+  font-family: ${(props) => props.theme.typography.fontFamily.regular};
+  font-size: ${(props) => props.theme.typography.fontSize.small}px;
+  color: ${(props) => props.theme.colors.text};
+  margin-bottom: 8px;
+  padding-left: 4px;
+`;
+
+const GenderOptions = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 12px;
+`;
+
+const GenderOption = styled(TouchableOpacity)<{ selected: boolean }>`
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid ${(props) =>
+    props.selected
+      ? props.theme.colors.primary
+      : (props.theme.colors.background === '#1C2526'
+          ? 'rgba(255, 255, 255, 0.3)'
+          : '#E0E0E0')
+  };
+  background-color: ${(props) =>
+    props.selected
+      ? props.theme.colors.primary + '20'
+      : (props.theme.colors.background === '#1C2526'
+          ? 'rgba(255, 255, 255, 0.1)'
+          : props.theme.colors.white)
+  };
+  align-items: center;
+  justify-content: center;
+`;
+
+const GenderOptionText = styled.Text<{ selected: boolean }>`
+  font-family: ${(props) => props.theme.typography.fontFamily.semiBold};
+  font-size: ${(props) => props.theme.typography.fontSize.medium}px;
+  color: ${(props) =>
+    props.selected
+      ? props.theme.colors.primary
+      : props.theme.colors.text
+  };
+`;
+
 const REGISTER_USER = gql`
-  mutation RegisterUser($email: String!, $password: String!) {
-    registerUser(email: $email, password: $password) {
+  mutation RegisterUser($input: RegisterInput!) {
+    register(input: $input) {
       user {
         id
         email
+        firstName
+        lastName
+        dateOfBirth
+        gender
         isProfileComplete
+        createdAt
       }
       token
     }
@@ -187,14 +245,23 @@ const REGISTER_USER = gql`
 const Registration: React.FC = () => {
   const navigation = useNavigation<RegistrationNavigationProp>();
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { setUser, setToken } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [gender, setGender] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
+  const [firstNameError, setFirstNameError] = useState<string | null>(null);
+  const [lastNameError, setLastNameError] = useState<string | null>(null);
+  const [dateOfBirthError, setDateOfBirthError] = useState<string | null>(null);
+  const [genderError, setGenderError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -202,39 +269,45 @@ const Registration: React.FC = () => {
   const buttonScale = useRef(new Animated.Value(1)).current;
 
   const [registerUser, { loading }] = useMutation(REGISTER_USER, {
-    onCompleted: (data) => {
-      try {
-        const { user, token } = data.registerUser;
-        
-        // Store user and token
-        setUser(user);
-        setToken(token);
-        
-        // Navigate to profile setup
-        navigation.navigate('OnboardingProfileSetup');
-        
-        // Show success message
-        Alert.alert(
-          'Welcome to FitTrack!',
-          'Your account has been created successfully. Let\'s complete your profile.',
-          [{ text: 'Continue', style: 'default' }]
-        );
-      } catch (err) {
-        setError('Registration completed but navigation failed. Please try logging in.');
-      }
-    },
-    onError: (error) => {
-      console.error('Registration error:', error);
-      
-      // Handle specific error types
-      if (error.message.includes('already exists')) {
-        setEmailError('An account with this email already exists');
-      } else if (error.message.includes('password')) {
-        setPasswordError('Password does not meet requirements');
-      } else {
-        setError(error.message || 'Registration failed. Please try again.');
-      }
-    },
+  errorPolicy: 'all', // Add this to get both data and errors
+  onCompleted: (data) => {
+    try {
+      const { user, token } = data.register;
+
+      // Store user and token
+      setUser(user);
+      setToken(token);
+
+      // Navigate to profile setup
+      navigation.navigate('OnboardingProfileSetup');
+
+      // Show success message
+      Alert.alert(
+        'Welcome to FitTrack!',
+        'Your account has been created successfully. Let\'s complete your profile.',
+        [{ text: 'Continue', style: 'default' }]
+      );
+    } catch (err) {
+      console.error('Error processing registration response:', err);
+      setError('Registration completed but navigation failed. Please try logging in.');
+    }
+  },
+  onError: (error) => {
+    console.error('Registration error:', error);
+    console.error('GraphQL errors:', error.graphQLErrors);
+    console.error('Network error:', error.networkError);
+    
+    // Handle specific error types
+    if (error.message.includes('already exists')) {
+      setEmailError('An account with this email already exists');
+    } else if (error.message.includes('password')) {
+      setPasswordError('Password does not meet requirements');
+    } else if (error.networkError) {
+      setError('Network error. Please check your connection and try again.');
+    } else {
+      setError(error.message || 'Registration failed. Please try again.');
+    }
+  },
   });
 
   const validateForm = (): boolean => {
@@ -242,10 +315,32 @@ const Registration: React.FC = () => {
     setEmailError(null);
     setPasswordError(null);
     setConfirmPasswordError(null);
+    setFirstNameError(null);
+    setLastNameError(null);
+    setDateOfBirthError(null);
+    setGenderError(null);
     setError(null);
-    
+
     let hasError = false;
-    
+
+    // First name validation
+    if (!firstName.trim()) {
+      setFirstNameError('First name is required');
+      hasError = true;
+    } else if (firstName.trim().length < 2) {
+      setFirstNameError('First name must be at least 2 characters');
+      hasError = true;
+    }
+
+    // Last name validation
+    if (!lastName.trim()) {
+      setLastNameError('Last name is required');
+      hasError = true;
+    } else if (lastName.trim().length < 2) {
+      setLastNameError('Last name must be at least 2 characters');
+      hasError = true;
+    }
+
     // Email validation
     if (!email.trim()) {
       setEmailError('Email is required');
@@ -254,7 +349,27 @@ const Registration: React.FC = () => {
       setEmailError('Please enter a valid email address');
       hasError = true;
     }
-    
+
+    // Date of birth validation
+    if (!dateOfBirth.trim()) {
+      setDateOfBirthError('Date of birth is required');
+      hasError = true;
+    } else {
+      const birthDate = new Date(dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      if (age < 13 || age > 120) {
+        setDateOfBirthError('Please enter a valid date of birth');
+        hasError = true;
+      }
+    }
+
+    // Gender validation
+    if (!gender) {
+      setGenderError('Please select your gender');
+      hasError = true;
+    }
+
     // Password validation
     if (!password) {
       setPasswordError('Password is required');
@@ -266,7 +381,7 @@ const Registration: React.FC = () => {
       setPasswordError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
       hasError = true;
     }
-    
+
     // Confirm password validation
     if (!confirmPassword) {
       setConfirmPasswordError('Please confirm your password');
@@ -275,25 +390,47 @@ const Registration: React.FC = () => {
       setConfirmPasswordError('Passwords do not match');
       hasError = true;
     }
-    
+
     return !hasError;
   };
 
   const handleRegister = async () => {
-    if (!validateForm()) return;
-    
-    try {
-      await registerUser({ 
-        variables: { 
-          email: email.trim().toLowerCase(), 
-          password 
-        } 
-      });
-    } catch (err) {
-      // Error is handled in onError callback
-      console.error('Registration submission error:', err);
+  try {
+    // Clear previous errors
+    setError('');
+    setEmailError('');
+    setPasswordError('');
+
+    // Validate input before sending
+    if (!email || !password || !firstName || !lastName) {
+      setError('Please fill in all required fields');
+      return;
     }
-  };
+
+    if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters long');
+      return;
+    }
+
+    // Call the mutation
+    await registerUser({
+      variables: {
+        input: {
+          email: email.trim().toLowerCase(),
+          password,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          dateOfBirth: dateOfBirth || null,
+          gender: gender || null,
+        }
+      }
+    });
+  } catch (err) {
+    // This catch block handles any errors not caught by onError
+    console.error('Unexpected error during registration:', err);
+    setError('An unexpected error occurred. Please try again.');
+  }
+};;
 
   const handlePressIn = () => {
     Animated.spring(buttonScale, {
@@ -316,9 +453,17 @@ const Registration: React.FC = () => {
     setEmailError(null);
     setPasswordError(null);
     setConfirmPasswordError(null);
+    setFirstNameError(null);
+    setLastNameError(null);
+    setDateOfBirthError(null);
+    setGenderError(null);
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setFirstName('');
+    setLastName('');
+    setDateOfBirth('');
+    setGender('');
     setTimeout(() => setRefreshing(false), 1000);
   };
 
@@ -326,22 +471,77 @@ const Registration: React.FC = () => {
 
   return (
     <Container>
-      <Content
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <CenteredContainer>
+        <Content
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.primary}
+              colors={[theme.colors.primary]}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
+        <CenteredContainer paddingTop={insets.top} paddingBottom={insets.bottom}>
           <FormContainer>
             <Title>Join FitTrack</Title>
-            
+
+            <Input
+              placeholder="First Name"
+              placeholderTextColor={
+                theme.colors.background === '#1C2526'
+                  ? 'rgba(255, 255, 255, 0.6)'
+                  : theme.colors.secondaryText
+              }
+              value={firstName}
+              onChangeText={(text) => {
+                setFirstName(text);
+                if (firstNameError) setFirstNameError(null);
+              }}
+              autoCapitalize="words"
+              autoCorrect={false}
+              editable={!loading}
+              style={{
+                borderColor: firstNameError ? theme.colors.accent : (
+                  theme.colors.background === '#1C2526'
+                    ? 'rgba(255, 255, 255, 0.3)'
+                    : '#E0E0E0'
+                )
+              }}
+            />
+            {firstNameError && <ErrorText>{firstNameError}</ErrorText>}
+
+            <Input
+              placeholder="Last Name"
+              placeholderTextColor={
+                theme.colors.background === '#1C2526'
+                  ? 'rgba(255, 255, 255, 0.6)'
+                  : theme.colors.secondaryText
+              }
+              value={lastName}
+              onChangeText={(text) => {
+                setLastName(text);
+                if (lastNameError) setLastNameError(null);
+              }}
+              autoCapitalize="words"
+              autoCorrect={false}
+              editable={!loading}
+              style={{
+                borderColor: lastNameError ? theme.colors.accent : (
+                  theme.colors.background === '#1C2526'
+                    ? 'rgba(255, 255, 255, 0.3)'
+                    : '#E0E0E0'
+                )
+              }}
+            />
+            {lastNameError && <ErrorText>{lastNameError}</ErrorText>}
+
             <Input
               placeholder="Email"
               placeholderTextColor={
@@ -367,7 +567,69 @@ const Registration: React.FC = () => {
               }}
             />
             {emailError && <ErrorText>{emailError}</ErrorText>}
-            
+
+            <Input
+              placeholder="Date of Birth (YYYY-MM-DD)"
+              placeholderTextColor={
+                theme.colors.background === '#1C2526'
+                  ? 'rgba(255, 255, 255, 0.6)'
+                  : theme.colors.secondaryText
+              }
+              value={dateOfBirth}
+              onChangeText={(text) => {
+                setDateOfBirth(text);
+                if (dateOfBirthError) setDateOfBirthError(null);
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!loading}
+              style={{
+                borderColor: dateOfBirthError ? theme.colors.accent : (
+                  theme.colors.background === '#1C2526'
+                    ? 'rgba(255, 255, 255, 0.3)'
+                    : '#E0E0E0'
+                )
+              }}
+            />
+            {dateOfBirthError && <ErrorText>{dateOfBirthError}</ErrorText>}
+
+            <GenderContainer>
+              <GenderLabel>Gender</GenderLabel>
+              <GenderOptions>
+                <GenderOption
+                  selected={gender === 'male'}
+                  onPress={() => {
+                    setGender('male');
+                    if (genderError) setGenderError(null);
+                  }}
+                  disabled={loading}
+                >
+                  <GenderOptionText selected={gender === 'male'}>Male</GenderOptionText>
+                </GenderOption>
+                <GenderOption
+                  selected={gender === 'female'}
+                  onPress={() => {
+                    setGender('female');
+                    if (genderError) setGenderError(null);
+                  }}
+                  disabled={loading}
+                >
+                  <GenderOptionText selected={gender === 'female'}>Female</GenderOptionText>
+                </GenderOption>
+                <GenderOption
+                  selected={gender === 'other'}
+                  onPress={() => {
+                    setGender('other');
+                    if (genderError) setGenderError(null);
+                  }}
+                  disabled={loading}
+                >
+                  <GenderOptionText selected={gender === 'other'}>Other</GenderOptionText>
+                </GenderOption>
+              </GenderOptions>
+            </GenderContainer>
+            {genderError && <ErrorText>{genderError}</ErrorText>}
+
             <InputContainer>
             <Input
               placeholder="Password"
@@ -536,6 +798,7 @@ const Registration: React.FC = () => {
           </FormContainer>
         </CenteredContainer>
       </Content>
+      </KeyboardAvoidingView>
     </Container>
   );
 };

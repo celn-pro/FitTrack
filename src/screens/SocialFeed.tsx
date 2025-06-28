@@ -31,17 +31,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const { width } = Dimensions.get('window');
 
 const ACTIVITY_TYPES = [
-  { label: 'Steps', value: 'steps' },
-  { label: 'Hydration', value: 'hydration' },
-  { label: 'Course', value: 'course' },
-  { label: 'Sleep', value: 'sleep' },
+  { label: 'Workout', value: 'workout' },
   { label: 'Nutrition', value: 'nutrition' },
   { label: 'Achievement', value: 'achievement' },
+  { label: 'General', value: 'general' },
 ];
 
 interface FeedComment {
   user: {
     id?: string;
+    firstName?: string;
+    lastName?: string;
     name: string;
     avatar?: string;
   };
@@ -53,6 +53,8 @@ interface FeedPost {
   id: string;
   user: {
     id?: string;
+    firstName?: string;
+    lastName?: string;
     name: string;
     avatar?: string;
   };
@@ -62,7 +64,7 @@ interface FeedPost {
   likes: number;
   likedByCurrentUser?: boolean;
   comments: FeedComment[];
-  activityType?: string;
+  activityType?: 'workout' | 'nutrition' | 'achievement' | 'general';
   activityValue?: string;
 }
 
@@ -164,7 +166,6 @@ const handleSubmitPost = async () => {
       await createFeedPost({
         variables: {
           input: {
-            user: user.id,
             content: postForm.content,
             activityType: postForm.activityType,
             activityValue: postForm.activityValue,
@@ -282,9 +283,10 @@ const handleSubmitPost = async () => {
                   <ActivityBadge>
                     <Icon name={getActivityIcon(item.activityType)} size={16} color="#fff" />
                     <ActivityBadgeText>
-                      {item.activityType === 'steps' && `${item.activityValue} steps`}
-                      {item.activityType === 'workout' && 'Workout'}
-                      {item.activityType === 'course' && 'Course'}
+                      {item.activityType === 'workout' && (item.activityValue ? `${item.activityValue}` : 'Workout')}
+                      {item.activityType === 'nutrition' && (item.activityValue ? `${item.activityValue}` : 'Nutrition')}
+                      {item.activityType === 'achievement' && (item.activityValue ? `${item.activityValue}` : 'Achievement')}
+                      {item.activityType === 'general' && (item.activityValue ? `${item.activityValue}` : 'General')}
                     </ActivityBadgeText>
                   </ActivityBadge>
                 )}
@@ -442,12 +444,12 @@ const handleSubmitPost = async () => {
                   <Picker.Item key={type.value} label={type.label} value={type.value} />
                 ))}
               </Picker>
-              {['steps', 'hydration', 'sleep'].includes(postForm.activityType) && (
+              {postForm.activityType && (
                 <TextInput
                   placeholder="Activity Value (optional)"
                   value={postForm.activityValue}
-                  onChangeText={val => setPostForm(f => ({ ...f, activityValue: val.replace(/[^0-9]/g, '') }))}
-                  keyboardType="numeric"
+                  onChangeText={val => setPostForm(f => ({ ...f, activityValue: val }))}
+                  keyboardType="default"
                   style={{
                     marginBottom: 12,
                     color: theme.colors.text,
@@ -525,20 +527,16 @@ function formatDate(dateInput: string | number) {
 
 function getActivityIcon(type?: string) {
   switch (type) {
-    case 'steps':
-      return 'directions-walk';
     case 'workout':
       return 'fitness-center';
-    case 'course':
-      return 'school';
     case 'nutrition':
       return 'restaurant';
-    case 'meditation':
-      return 'self-improvement';
-    case 'improvement':
-      return 'trending-up';
-    default:
+    case 'achievement':
       return 'emoji-events';
+    case 'general':
+      return 'info';
+    default:
+      return 'info';
   }
 }
 

@@ -62,7 +62,11 @@ const Settings: React.FC = () => {
         <SettingRow>
           <Icon name="person" size={22} color={theme.colors.primary} />
           <SettingLabel>Name</SettingLabel>
-          <SettingValue>{user?.name || '-'}</SettingValue>
+          <SettingValue>
+            {user?.firstName && user?.lastName
+              ? `${user.firstName} ${user.lastName}`
+              : user?.name || user?.firstName || '-'}
+          </SettingValue>
         </SettingRow>
         <SettingRow>
           <Icon name="email" size={22} color={theme.colors.primary} />

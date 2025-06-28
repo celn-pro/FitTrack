@@ -8,12 +8,14 @@ import { NavigationProp, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../navigation/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useApolloClient } from '@apollo/client';
 
 const Profile: React.FC = () => {
   const theme = useTheme();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { user, logout } = useAuthStore();
   const insets = useSafeAreaInsets();
+  const apolloClient = useApolloClient();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -25,20 +27,36 @@ const Profile: React.FC = () => {
           text: 'Log Out',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.multiRemove([
-              'recommendations',
-              'recommendationsDate',
-              'healthTips',
-              'healthTipsDate',
-              'didYouKnow',
-              'didYouKnowDate',
-              'moodHistory',
-              'lastLoginDate',
-              'loginStreak',
-              'streakHistory'
-            ]);
-            logout();
-            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+            try {
+              // Clear AsyncStorage data
+              await AsyncStorage.multiRemove([
+                'recommendations',
+                'recommendationsDate',
+                'healthTips',
+                'healthTipsDate',
+                'didYouKnow',
+                'didYouKnowDate',
+                'moodHistory',
+                'lastLoginDate',
+                'loginStreak',
+                'streakHistory'
+              ]);
+
+              // Clear Apollo cache to remove cached courses and other data
+              await apolloClient.clearStore();
+              console.log('🧹 Apollo cache cleared on logout');
+
+              // Logout from auth store
+              logout();
+
+              // Navigate to login
+              navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+            } catch (error) {
+              console.error('Error during logout:', error);
+              // Still proceed with logout even if cache clearing fails
+              logout();
+              navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+            }
           }
         },
       ]
@@ -86,20 +104,40 @@ const Profile: React.FC = () => {
         <SectionTitle>Profile Overview</SectionTitle>
         <DetailRow>
           <DetailLabel>Name</DetailLabel>
-          <DetailValue>{user.name || '-'}</DetailValue>
+          <DetailValue>
+            {user?.firstName && user?.lastName
+              ? `${user.firstName} ${user.lastName}`
+              : user?.name || user?.firstName || '-'}
+          </DetailValue>
         </DetailRow>
         <DetailRow>
           <DetailLabel>Email</DetailLabel>
-          <DetailValue>{user.email}</DetailValue>
+          <DetailValue>{user?.email || '-'}</DetailValue>
         </DetailRow>
+        {user?.age && (
+          <DetailRow>
+            <DetailLabel>Age</DetailLabel>
+            <DetailValue>{user.age} years</DetailValue>
+          </DetailRow>
+        )}
+        {user?.bmi && (
+          <DetailRow>
+            <DetailLabel>BMI</DetailLabel>
+            <DetailValue>{user.bmi.toFixed(1)}</DetailValue>
+          </DetailRow>
+        )}
         <DetailRow>
-          <DetailLabel>Fitness Goal</DetailLabel>
-          <DetailValue>{user.fitnessGoal || '-'}</DetailValue>
+          <DetailLabel>Fitness Goals</DetailLabel>
+          <DetailValue>
+            {user?.fitnessGoals && user.fitnessGoals.length > 0
+              ? user.fitnessGoals.join(', ')
+              : user?.fitnessGoal || '-'}
+          </DetailValue>
         </DetailRow>
         <DetailRow>
           <DetailLabel>Profile Complete</DetailLabel>
           <DetailValue>
-            {user.isProfileComplete ? (
+            {user?.isProfileComplete ? (
               <Icon name="check-circle" size={18} color={theme.colors.primary} />
             ) : (
               <Icon name="cancel" size={18} color={theme.colors.accent} />

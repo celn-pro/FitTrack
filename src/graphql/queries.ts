@@ -3,8 +3,8 @@ import { gql } from '@apollo/client';
 
 // Recommendations queries and mutations
 export const GET_RECOMMENDATIONS = gql`
-  query GetRecommendations {
-    getRecommendations {
+  query GetRecommendations($filter: RecommendationFilter) {
+    getRecommendations(filter: $filter) {
       id
       category
       title
@@ -13,36 +13,59 @@ export const GET_RECOMMENDATIONS = gql`
       steps {
         title
         description
-        image
         duration
+        media {
+          type
+          url
+          caption
+        }
       }
       tips
       articles {
         title
         url
+        summary
       }
       macros {
-        protein
-        carbs
-        fat
+        protein {
+          grams
+          calories
+          percentage
+        }
+        carbohydrates {
+          grams
+          calories
+          percentage
+        }
+        fats {
+          grams
+          calories
+          percentage
+        }
       }
       calories
       reminders
       dailyGoalMl
       sleepGoalHours
-      ageRange {
-        min
-        max
-      }
-      weightRange {
-        min
-        max
-      }
+      calculatedCalories
+      difficultyLevel
+      estimatedDuration
+      personalizedTips
       createdAt
-      updatedAt
+      source
+      hasWorkingImage
     }
   }
 `;
+
+// Optional: Filter input type for TypeScript
+export interface RecommendationFilter {
+  category?: string;
+  difficultyLevel?: string;
+  maxDuration?: number;
+  includeEquipment?: string[];
+  excludeHealthConditions?: string[];
+}
 
 export const CREATE_RECOMMENDATION = gql`
   mutation CreateRecommendation($input: RecommendationInput!) {
@@ -55,25 +78,47 @@ export const CREATE_RECOMMENDATION = gql`
     steps {
       title
       description
-      image
       duration
+      media {
+        type
+        url
+        caption
+      }
     }
     tips
     articles {
       title
       url
+      summary
     }
     macros {
-      protein
-      carbs
-      fat
+      protein {
+        grams
+        calories
+        percentage
+      }
+      carbohydrates {
+        grams
+        calories
+        percentage
+      }
+      fats {
+        grams
+        calories
+        percentage
+      }
     }
     calories
     reminders
     dailyGoalMl
     sleepGoalHours
+    calculatedCalories
+    difficultyLevel
+    estimatedDuration
+    personalizedTips
     createdAt
-    updatedAt
+    source
+    hasWorkingImage
   }
 }
 `;
@@ -89,25 +134,47 @@ export const UPDATE_RECOMMENDATION = gql`
       steps {
         title
         description
-        image
         duration
+        media {
+          type
+          url
+          caption
+        }
       }
       tips
       articles {
         title
         url
+        summary
       }
       macros {
-        protein
-        carbs
-        fat
+        protein {
+          grams
+          calories
+          percentage
+        }
+        carbohydrates {
+          grams
+          calories
+          percentage
+        }
+        fats {
+          grams
+          calories
+          percentage
+        }
       }
       calories
       reminders
       dailyGoalMl
       sleepGoalHours
+      calculatedCalories
+      difficultyLevel
+      estimatedDuration
+      personalizedTips
       createdAt
-      updatedAt
+      source
+      hasWorkingImage
     }
 }
 `;
@@ -122,30 +189,71 @@ export const ON_RECOMMENDATION_UPDATE = gql`
   subscription OnRecommendationUpdate($email: String!) {
     onRecommendationUpdate(email: $email) {
       id
+      category
       title
       description
-      type
-      category
-      priority
-      media
-      frequency
+      image
+      steps {
+        title
+        description
+        duration
+        media {
+          type
+          url
+          caption
+        }
+      }
+      tips
+      articles {
+        title
+        url
+        summary
+      }
+      macros {
+        protein {
+          grams
+          calories
+          percentage
+        }
+        carbohydrates {
+          grams
+          calories
+          percentage
+        }
+        fats {
+          grams
+          calories
+          percentage
+        }
+      }
+      calories
+      reminders
+      dailyGoalMl
+      sleepGoalHours
+      calculatedCalories
+      difficultyLevel
+      estimatedDuration
+      personalizedTips
+      createdAt
+      source
+      hasWorkingImage
     }
   }
 `;
 
 // Healthy tips queries and mutaions
 export const GET_HEALTH_TIPS = gql`
-  query GetHealthTips {
-    getHealthTips {
-      id
-      title
-      description
-      category
-      icon
-      image
-      link
-      createdAt
-      updatedAt
+  query GetDailyHealthTips {
+    getDailyHealthTips {
+      date
+      tips {
+        id
+        title
+        content
+        category
+        difficulty
+        estimatedReadTime
+      }
     }
   }
 `;
@@ -208,23 +316,19 @@ export const DELETE_HEALTH_TIP = gql`
 
 // Didi you know queries and mutations
 export const GET_DID_YOU_KNOW = gql`
-  query GetDidYouKnow {
-    getDidYouKnow {
-      id
-      fact
-      source
-      image
-      link
-      ageRange {
-        min
-        max
+  query GetDailyDidYouKnowFacts {
+    getDailyDidYouKnowFacts {
+      date
+      totalFacts
+      facts {
+        id
+        fact
+        category
+        source
+        difficulty
+        estimatedReadTime
+        isVerified
       }
-      weightRange {
-        min
-        max
-      }
-      createdAt
-      updatedAt
     }
   }
 `;
@@ -283,36 +387,46 @@ export const DELETE_DID_YOU_KNOW = gql`
 
 // Courses queries and mutations
 export const GET_COURSES = gql`
-  query GetCourses {
-    getCourses {
+  query GET_COURSES {
+    getFeaturedCourses {
       id
-      goal
       title
       description
-      level
-      coverImage
-      topics {
+      category
+      difficulty
+      duration
+      instructor
+      thumbnailUrl
+      tags
+      lessons {
         id
         title
         description
-        steps {
-          id
-          title
-          content
-          illustration
-          videoUrl
+        duration
+        contentType
+        content
+        exercises {
+          name
+          instructions
+          duration
+          reps
+          sets
+          imageUrl
+          targetMuscles
+          equipment
+        }
+        quiz {
+          questions {
+            question
+            options
+            correctAnswer
+            explanation
+          }
+          passingScore
         }
       }
-      ageRange {
-        min
-        max
-      }
-      weightRange {
-        min
-        max
-      }
-      createdAt
-      updatedAt
+      learningObjectives
+      targetAudience
     }
   }
 `;
@@ -400,17 +514,22 @@ export const GET_SOCIAL_FEED = gql`
       id
       user {
         id
+        firstName
+        lastName
         name
         avatar
       }
       content
       createdAt
+      updatedAt
       image
       likes
       likedByCurrentUser
       comments {
         user {
           id
+          firstName
+          lastName
           name
           avatar
         }
@@ -425,58 +544,77 @@ export const GET_SOCIAL_FEED = gql`
 
 export const CREATE_FEED_POST = gql`
   mutation CreateFeedPost($input: FeedPostInput!) {
-  createFeedPost(input: $input) {
-    id
-    user {
+    createFeedPost(input: $input) {
       id
-      name
-      avatar
-    }
-    content
-    createdAt
-    image
-    likes
-    likedByCurrentUser
-    comments {
       user {
         id
+        firstName
+        lastName
         name
         avatar
       }
-      comment
+      content
       createdAt
+      updatedAt
+      image
+      likes
+      likedByCurrentUser
+      comments {
+        user {
+          id
+          firstName
+          lastName
+          name
+          avatar
+        }
+        comment
+        createdAt
+      }
+      activityType
+      activityValue
     }
-    activityType
-    activityValue
   }
-}
 `;
 
 export const UPDATE_FEED_POST = gql`
-mutation UpdateFeedPost($id: ID!, $input: UpdateFeedPostInput!) {
-  updateFeedPost(id: $id, input: $input) {
-    id
-    content
-    image
-    activityType
-    activityValue
-    createdAt
-    user { id name avatar }
-    likes
-    likedByCurrentUser
-    comments {
-      user { id name avatar }
-      comment
+  mutation UpdateFeedPost($id: ID!, $input: UpdateFeedPostInput!) {
+    updateFeedPost(id: $id, input: $input) {
+      id
+      content
+      image
+      activityType
+      activityValue
       createdAt
+      updatedAt
+      user {
+        id
+        firstName
+        lastName
+        name
+        avatar
+      }
+      likes
+      likedByCurrentUser
+      comments {
+        user {
+          id
+          firstName
+          lastName
+          name
+          avatar
+        }
+        comment
+        createdAt
+      }
     }
   }
-}`
+`;
 
 export const DELETE_FEED_POST = gql`
   mutation DeleteFeedPost($id: ID!) {
-  deleteFeedPost(id: $id)
-}
-`
+    deleteFeedPost(id: $id)
+  }
+`;
 
 export const LIKE_POST = gql`
   mutation LikeFeedPost($id: ID!) {
@@ -494,6 +632,8 @@ export const ADD_COMMENT = gql`
       comments {
         user {
           id
+          firstName
+          lastName
           name
           avatar
         }

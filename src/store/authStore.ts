@@ -3,18 +3,42 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+interface NotificationSettings {
+  workoutReminders: boolean;
+  nutritionTips: boolean;
+  progressUpdates: boolean;
+  emailNotifications: boolean;
+}
+
 interface User {
   id: string;
   email: string;
-  name?: string;
-  age?: number;
-  weight?: number;
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: string;
   height?: number;
-  fitnessGoal?: string;
-  dietaryPreference?: string;
+  weight?: number;
+  fitnessLevel?: string;
+  activityLevel?: string;
+  fitnessGoals?: string[];
+  healthConditions?: string[];
+  injuries?: string[];
+  dietaryPreferences?: string[];
+  dietaryRestrictions?: string[];
+  preferredWorkoutTypes?: string[];
+  isEmailVerified?: boolean;
   isProfileComplete: boolean;
+  notificationSettings?: NotificationSettings;
+  age?: number;
+  bmi?: number;
   createdAt?: string;
   updatedAt?: string;
+  lastLoginAt?: string;
+  // Legacy fields for backward compatibility
+  name?: string;
+  fitnessGoal?: string;
+  dietaryPreference?: string;
 }
 
 interface AuthState {
@@ -119,12 +143,24 @@ export const authUtils = {
   getDisplayName: (): string => {
     const user = useAuthStore.getState().getUser();
     if (!user) return 'User';
-    
+
+    // Try firstName first (new structure)
+    if (user.firstName) {
+      return user.firstName;
+    }
+
+    // Try legacy name field
     if (user.name) {
       return user.name.split(' ')[0]; // Return first name
     }
-    
-    return user.email.split('@')[0]; // Fallback to email username
+
+    // Fallback to email username if email exists
+    if (user.email) {
+      return user.email.split('@')[0];
+    }
+
+    // Final fallback
+    return 'User';
   },
 
   // Calculate BMI if height and weight are available

@@ -1,16 +1,18 @@
 import React, { useRef, useEffect } from 'react';
-import { ScrollView, Linking, Animated } from 'react-native';
+import { ScrollView, Linking, Animated, Text } from 'react-native';
 import styled, { useTheme } from 'styled-components/native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import { RestRecommendation } from '../constants';
+import { Recommendation } from '../types/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const RestDetailScreen: React.FC = () => {
   const theme = useTheme();
-  const route = useRoute<RouteProp<{ params: { rest: RestRecommendation } }, 'params'>>();
+  const route = useRoute<RouteProp<{ params: { rest: Recommendation } }, 'params'>>();
   const navigation = useNavigation();
   const { rest } = route.params;
+  const insets = useSafeAreaInsets();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -31,6 +33,7 @@ const RestDetailScreen: React.FC = () => {
       }
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
+      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <HeaderRow>
         <BackButton onPress={() => navigation.goBack()}>
@@ -49,9 +52,6 @@ const RestDetailScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <AnimatedCard style={{ opacity: fadeAnim }}>
-          <IconCircle>
-            <Icon name="bedtime" size={36} color={theme.colors.primary} />
-          </IconCircle>
           {rest.image && <CoverImage source={{ uri: rest.image }} />}
           <Description>{rest.description}</Description>
           {rest.sleepGoalHours && (
@@ -60,13 +60,68 @@ const RestDetailScreen: React.FC = () => {
               Sleep Goal: <GoalValue>{rest.sleepGoalHours} hours</GoalValue>
             </Goal>
           )}
-          <SectionTitle>Tips</SectionTitle>
-          {rest.tips.map((tip, idx) => (
-            <TipCard key={idx}>
-              <Icon name="check-circle" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
-              <TipText>{tip}</TipText>
-            </TipCard>
+          {rest.difficultyLevel && (
+            <DifficultyLevel>
+              <Icon name="trending-up" size={14} color={theme.colors.accent} /> Difficulty: {rest.difficultyLevel}
+            </DifficultyLevel>
+          )}
+          {rest.estimatedDuration && (
+            <EstimatedDuration>
+              <Icon name="timer" size={14} color={theme.colors.accent} /> Duration: {rest.estimatedDuration} min
+            </EstimatedDuration>
+          )}
+          <SectionTitle>Steps</SectionTitle>
+          {rest.steps?.map((step, idx) => (
+            <StepCard key={idx}>
+              <StepHeader>
+                <StepIndex>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>{idx + 1}</Text>
+                </StepIndex>
+                <StepTitle numberOfLines={2}>{step.title}</StepTitle>
+              </StepHeader>
+              {step.media && step.media.map((media, mIdx) => {
+                if (media.type === 'image' || media.type === 'gif') {
+                  return (
+                    <StepImage key={mIdx} source={{ uri: media.url }} />
+                  );
+                }
+                if (media.type === 'video') {
+                  return (
+                    <StepVideoContainer key={mIdx}>
+                      <StepVideoThumbnail source={{ uri: media.url || '' }} />
+                      <StepVideoLabel>Video</StepVideoLabel>
+                    </StepVideoContainer>
+                  );
+                }
+                return null;
+              })}
+              <StepDescription>
+                {step.description}
+              </StepDescription>
+            </StepCard>
           ))}
+          {rest.tips && rest.tips.length > 0 && (
+            <>
+              <SectionTitle>Tips</SectionTitle>
+              {rest.tips.map((tip, idx) => (
+                <TipCard key={idx}>
+                  <Icon name="check-circle" size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                  <TipText>{tip}</TipText>
+                </TipCard>
+              ))}
+            </>
+          )}
+          {rest.personalizedTips && rest.personalizedTips.length > 0 && (
+            <>
+              <SectionTitle>Personalized Tips</SectionTitle>
+              {rest.personalizedTips.map((tip, idx) => (
+                <TipCard key={`personalized-${idx}`}>
+                  <Icon name="person" size={16} color={theme.colors.accent} style={{ marginRight: 8 }} />
+                  <TipText>{tip}</TipText>
+                </TipCard>
+              ))}
+            </>
+          )}
           {rest.articles && rest.articles.length > 0 && (
             <>
               <SectionTitle>Helpful Articles</SectionTitle>
@@ -190,6 +245,95 @@ const ArticleLink = styled.Text`
   text-decoration: underline;
   margin-bottom: 8px;
   margin-top: 2px;
+  flex-direction: row;
+  align-items: center;
+`;
+
+const StepCard = styled.View`
+  background-color: ${({ theme }) => theme.colors.card || '#f6f8fa'};
+  border-radius: 14px;
+  margin-bottom: 18px;
+  padding: 14px 12px 10px 12px;
+  width: 100%;
+  elevation: 2;
+  shadow-color: #000;
+  shadow-opacity: 0.04;
+  shadow-radius: 4px;
+  shadow-offset: 0px 1px;
+`;
+
+const StepHeader = styled.View`
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 6px;
+`;
+
+const StepIndex = styled.View`
+  background-color: ${({ theme }) => theme.colors.primary};
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+`;
+
+const StepTitle = styled.Text`
+  font-size: 15px;
+  font-weight: bold;
+  color: ${({ theme }) => theme.colors.primary};
+  flex: 1;
+`;
+
+const StepImage = styled.Image`
+  width: 100%;
+  height: 120px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: #eee;
+`;
+
+const StepVideoContainer = styled.View`
+  margin-bottom: 8px;
+  align-items: center;
+`;
+
+const StepVideoThumbnail = styled.Image`
+  width: 100%;
+  height: 120px;
+  border-radius: 10px;
+  background: #222;
+`;
+
+const StepVideoLabel = styled.Text`
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+`;
+
+const StepDescription = styled.Text`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text};
+  margin-bottom: 4px;
+`;
+
+const DifficultyLevel = styled.Text`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.accent};
+  margin-bottom: 8px;
+  flex-direction: row;
+  align-items: center;
+`;
+
+const EstimatedDuration = styled.Text`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.accent};
+  margin-bottom: 16px;
   flex-direction: row;
   align-items: center;
 `;

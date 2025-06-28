@@ -4,64 +4,48 @@ import { onError } from '@apollo/client/link/error';
 import { useAuthStore } from '../store/authStore';
 import { API_BASE_URL } from '../utils/env';
 
-
-// Replace with your actual GraphQL endpoint
-const HTTP_ENDPOINT = API_BASE_URL;
+// Make sure this points to /graphql endpoint
+const HTTP_ENDPOINT = 'http://10.0.2.2:4000/graphql'; // Add /graphql if missing
 
 const httpLink = createHttpLink({
   uri: HTTP_ENDPOINT,
 });
 
-// Auth link to add authentication headers
+// Auth link - simplified
 const authLink = setContext((_, { headers }) => {
-  // Get the authentication token from your auth store
   const token = useAuthStore.getState().token;
   
   return {
     headers: {
       ...headers,
-      Authorization: token ? `Bearer ${token}` : '',
-      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }), // Only add if token exists
     }
   };
 });
 
-// Error link for handling GraphQL errors
+// Enhanced error link
 const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
   if (graphQLErrors) {
     graphQLErrors.forEach(({ message, locations, path }) => {
-      console.log(
+      console.error(
         `[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`
       );
     });
   }
 
   if (networkError) {
-    console.log(`[Network error]: ${networkError}`);
+    console.error(`[Network error]:`, networkError);
     
     // Handle authentication errors
-    if (
-      typeof networkError === 'object' &&
-      networkError !== null &&
-      'statusCode' in networkError &&
-      (networkError as any).statusCode === 401
-    ) {
-      // Clear user data and redirect to login
+    if ('statusCode' in networkError && networkError.statusCode === 401) {
       useAuthStore.getState().logout();
     }
   }
 });
 
-// Combine all links
-const link = from([
-  errorLink,
-  authLink,
-  httpLink,
-]);
-
 // Create Apollo Client
 export const apolloClient = new ApolloClient({
-  link,
+  link: from([errorLink, authLink, httpLink]),
   cache: new InMemoryCache(),
   defaultOptions: {
     watchQuery: {
@@ -69,6 +53,9 @@ export const apolloClient = new ApolloClient({
     },
     query: {
       errorPolicy: 'all',
+    },
+    mutate: {
+      errorPolicy: 'all', // Add this for mutations
     },
   },
 });

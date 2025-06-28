@@ -151,87 +151,136 @@ export const REST_RECOMMENDATIONS: RestRecommendation[] = [
 export interface HealthTip {
   id: string;
   title: string;
-  description: string;
+  content: string;
   category: 'nutrition' | 'exercise' | 'sleep' | 'mental' | 'hydration';
-  icon: string;
-  image?: string;
-  link?: string;
+  difficulty: string;
+  estimatedReadTime: number;
 }
 
 export const HEALTH_TIPS: HealthTip[] = [
   {
     id: '1',
     title: 'Hydration Boost',
-    description: 'Drink water immediately after waking up to kickstart metabolism.',
+    content: 'Drink water immediately after waking up to kickstart metabolism.',
     category: 'hydration',
-    icon: 'local-drink',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb',
-    link: 'https://www.healthline.com/nutrition/how-much-water-should-you-drink-per-day'
+    difficulty: 'Easy',
+    estimatedReadTime: 2
   },
   {
     id: '2',
     title: 'Power Nap',
-    description: '20-minute naps can improve alertness and cognitive function.',
+    content: '20-minute naps can improve alertness and cognitive function.',
     category: 'sleep',
-    icon: 'bedtime',
-    image: 'https://images.unsplash.com/photo-1464983953574-0892a716854b',
-    link: 'https://www.sleepfoundation.org/sleep-hygiene/napping'
+    difficulty: 'Easy',
+    estimatedReadTime: 3
   },
   {
     id: '3',
     title: 'Protein Power',
-    description: 'Include protein in every meal to maintain stable blood sugar.',
+    content: 'Include protein in every meal to maintain stable blood sugar.',
     category: 'nutrition',
-    icon: 'restaurant',
-    image: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c',
-    link: 'https://www.healthline.com/nutrition/importance-of-protein'
+    difficulty: 'Medium',
+    estimatedReadTime: 4
   },
 ];
 
 export interface DidYouKnow {
   id: string;
   fact: string;
+  category: string;
   source: string;
-  image?: string;
-  link?: string;
+  difficulty: string;
+  estimatedReadTime: number;
+  isVerified: boolean;
 }
 
 export const DID_YOU_KNOW: DidYouKnow[] = [
   {
     id: '1',
     fact: 'Your brain uses 20% of your daily caloric intake despite being only 2% of your body weight.',
+    category: 'Health',
     source: 'Harvard Medical School',
-    image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca',
-    link: 'https://hms.harvard.edu/news/brain-food'
+    difficulty: 'Medium',
+    estimatedReadTime: 3,
+    isVerified: true
   },
   {
     id: '2',
     fact: 'Walking for just 2 minutes every hour can increase lifespan by 33%.',
+    category: 'Exercise',
     source: 'Clinical Journal of Sport Medicine',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb',
-    link: 'https://journals.lww.com/cjsportsmed'
+    difficulty: 'Easy',
+    estimatedReadTime: 2,
+    isVerified: true
   },
   {
     id: '3',
     fact: 'Laughing for 15 minutes burns the same calories as walking for 2 minutes.',
+    category: 'Wellness',
     source: 'Vanderbilt University',
-    image: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308',
-    link: 'https://news.vanderbilt.edu/2005/04/07/laughing-just-for-the-health-of-it-59315/'
+    difficulty: 'Easy',
+    estimatedReadTime: 2,
+    isVerified: true
   },
 ];
 
 export type FitnessGoal = 'Lose Weight' | 'Gain Muscle' | 'Maintain Health';
 
-export interface Course {
-  id: string;
-  goal: FitnessGoal;
-  title: string;
-  description: string;
-  level: 'Beginner' | 'Intermediate' | 'Advanced';
-  coverImage?: string;
-  topics: CourseTopic[];
+export interface Exercise {
+  name: string;
+  instructions: string;
+  duration: number;
+  reps?: number;
+  sets?: number;
+  imageUrl?: string;
+  targetMuscles: string[];
+  equipment: string[];
 }
 
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+}
+
+export interface Quiz {
+  questions: QuizQuestion[];
+  passingScore: number;
+}
+
+export interface Lesson {
+  id: string;
+  title: string;
+  description: string;
+  duration: number;
+  contentType: string;
+  content: string;
+  exercises?: Exercise[];
+  quiz?: Quiz;
+}
+
+export interface Course {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: string;
+  duration: number;
+  instructor: string;
+  thumbnailUrl?: string;
+  tags: string[];
+  lessons: Lesson[];
+  learningObjectives: string[];
+  targetAudience: string[];
+  // Legacy fields for backward compatibility
+  goal?: FitnessGoal;
+  level?: 'Beginner' | 'Intermediate' | 'Advanced';
+  coverImage?: string;
+  topics?: CourseTopic[];
+}
+
+// Legacy interfaces for backward compatibility
 export interface CourseTopic {
   id: string;
   title: string;
@@ -440,6 +489,9 @@ export const COURSES: Course[] = [
 export interface FeedPost {
   id: string;
   user: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
     name: string;
     avatar?: string;
   };
@@ -448,7 +500,7 @@ export interface FeedPost {
   image?: string;
   likes: number;
   comments: number;
-  activityType?: string; // e.g. 'steps', 'workout', 'course'
+  activityType?: 'workout' | 'nutrition' | 'achievement' | 'general';
   activityValue?: string;
 }
 
@@ -465,8 +517,8 @@ export const MOCK_SOCIAL_FEED: FeedPost[] = [
     image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb',
     likes: 23,
     comments: 5,
-    activityType: 'steps',
-    activityValue: '8500',
+    activityType: 'workout',
+    activityValue: '8500 steps',
   },
   {
     id: 'p2',
@@ -479,8 +531,8 @@ export const MOCK_SOCIAL_FEED: FeedPost[] = [
     image: 'https://images.unsplash.com/photo-1519864600265-abb23847ef2c',
     likes: 15,
     comments: 2,
-    activityType: 'course',
-    activityValue: '',
+    activityType: 'achievement',
+    activityValue: 'Course Completed',
   },
   {
     id: 'p3',
@@ -492,8 +544,8 @@ export const MOCK_SOCIAL_FEED: FeedPost[] = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
     likes: 12,
     comments: 1,
-    activityType: 'hydration',
-    activityValue: '2000',
+    activityType: 'nutrition',
+    activityValue: '2L water',
   },
   {
     id: 'p4',
@@ -505,8 +557,8 @@ export const MOCK_SOCIAL_FEED: FeedPost[] = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     likes: 30,
     comments: 7,
-    activityType: 'steps',
-    activityValue: '12000',
+    activityType: 'workout',
+    activityValue: '12000 steps',
   },
   {
     id: 'p5',
@@ -532,8 +584,8 @@ export const MOCK_SOCIAL_FEED: FeedPost[] = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
     likes: 22,
     comments: 4,
-    activityType: 'course',
-    activityValue: '',
+    activityType: 'achievement',
+    activityValue: 'Weight Loss Goal',
   },
   {
     id: 'p7',
@@ -545,8 +597,8 @@ export const MOCK_SOCIAL_FEED: FeedPost[] = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
     likes: 9,
     comments: 0,
-    activityType: 'sleep',
-    activityValue: '20',
+    activityType: 'general',
+    activityValue: '20 min nap',
   },
   {
     id: 'p8',
@@ -558,8 +610,8 @@ export const MOCK_SOCIAL_FEED: FeedPost[] = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 10).toISOString(),
     likes: 14,
     comments: 2,
-    activityType: 'sleep',
-    activityValue: '8',
+    activityType: 'general',
+    activityValue: '8 hours sleep',
   },
 ];
 

@@ -209,14 +209,38 @@ const RegisterLink = styled.Text`
 `;
 
 const LOGIN_USER = gql`
-  mutation LoginUser($email: String!, $password: String!) {
-    loginUser(email: $email, password: $password) {
+  mutation LOGIN_USER($input: LoginInput!) {
+    login(input: $input) {
       user {
         id
-        name
         email
-        fitnessGoal
+        firstName
+        lastName
+        dateOfBirth
+        gender
+        height
+        weight
+        fitnessLevel
+        activityLevel
+        fitnessGoals
+        healthConditions
+        injuries
+        dietaryPreferences
+        dietaryRestrictions
+        preferredWorkoutTypes
+        isEmailVerified
         isProfileComplete
+        notificationSettings {
+          workoutReminders
+          nutritionTips
+          progressUpdates
+          emailNotifications
+        }
+        age
+        bmi
+        createdAt
+        updatedAt
+        lastLoginAt
       }
       token
     }
@@ -267,7 +291,7 @@ const Login: React.FC = () => {
   const [loginUser, { loading }] = useMutation(LOGIN_USER, {
     onCompleted: (data) => {
       try {
-        const { user, token } = data.loginUser;
+        const { user, token } = data.login;
         
         // Store user and token
         setUser(user);
@@ -336,11 +360,13 @@ const Login: React.FC = () => {
     if (!validateForm()) return;
     
     try {
-      await loginUser({ 
-        variables: { 
-          email: email.trim().toLowerCase(), 
-          password 
-        } 
+      await loginUser({
+        variables: {
+          input: {
+            email: email.trim().toLowerCase(),
+            password
+          }
+        }
       });
     } catch (err) {
       // Error is handled in onError callback

@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Alert, Animated, TouchableOpacity, Dimensions, View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import styled, { useTheme } from 'styled-components/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -13,45 +13,42 @@ import { RootStackParamList } from '../../navigation/types';
 
 type ProfileSetupNavigationProp = StackNavigationProp<RootStackParamList, 'OnboardingProfileSetup'>;
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+// Removed unused screen dimensions
 
 const steps = [
-  'Basic Info',
-  'Goals & Preferences',
-  'Health & Finish'
+  'Physical Stats',
+  'Fitness Goals',
+  'Health & Diet'
 ];
 
-const COMPLETE_PROFILE = gql`
-  mutation CompleteProfile(
-    $name: String!
-    $age: Int!
-    $weight: Float!
-    $height: Float!
-    $gender: String!
-    $fitnessGoal: String!
-    $dietaryPreference: String!
-    $healthConditions: [String!]!
-    $activityLevel: String!
-    $preferredWorkoutTypes: [String!]!
-    $dietaryRestrictions: [String!]!
-  ) {
-    completeProfile(
-      name: $name
-      age: $age
-      weight: $weight
-      height: $height
-      gender: $gender
-      fitnessGoal: $fitnessGoal
-      dietaryPreference: $dietaryPreference
-      healthConditions: $healthConditions
-      activityLevel: $activityLevel
-      preferredWorkoutTypes: $preferredWorkoutTypes
-      dietaryRestrictions: $dietaryRestrictions
-    ) {
+export const COMPLETE_PROFILE = gql`
+  mutation CompleteProfile($input: UpdateProfileInput!) {
+    updateProfile(input: $input) {
       id
-      name
-      email
+      firstName
+      lastName
+      dateOfBirth
+      gender
+      height
+      weight
+      fitnessLevel
+      activityLevel
+      fitnessGoals
+      healthConditions
+      injuries
+      dietaryPreferences
+      dietaryRestrictions
+      preferredWorkoutTypes
       isProfileComplete
+      age
+      bmi
+      notificationSettings {
+        workoutReminders
+        nutritionTips
+        progressUpdates
+        emailNotifications
+      }
+      updatedAt
     }
   }
 `;
@@ -59,30 +56,32 @@ const COMPLETE_PROFILE = gql`
 const ProfileSetup: React.FC = () => {
   const navigation = useNavigation<ProfileSetupNavigationProp>();
   const theme = useTheme();
-  const { setUser } = useAuthStore();
+  const insets = useSafeAreaInsets();
+  const { user, setUser } = useAuthStore();
 
   // Multi-step state
   const [step, setStep] = useState(0);
 
-  // Form state
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [weight, setWeight] = useState('');
-  const [height, setHeight] = useState('');
-  const [gender, setGender] = useState('');
-  const [fitnessGoal, setFitnessGoal] = useState('Lose Weight');
-  const [dietaryPreference, setDietaryPreference] = useState('None');
-  const [healthConditions, setHealthConditions] = useState<string[]>([]);
-  const [activityLevel, setActivityLevel] = useState('');
-  const [preferredWorkoutTypes, setPreferredWorkoutTypes] = useState<string[]>([]);
-  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
+
+
+  // Form state - All fields we can send to backend
+  const [height, setHeight] = useState(user?.height ? user.height.toString() : '');
+  const [weight, setWeight] = useState(user?.weight ? user.weight.toString() : '');
+  const [fitnessLevel, setFitnessLevel] = useState(user?.fitnessLevel || '');
+  const [activityLevel, setActivityLevel] = useState(user?.activityLevel || '');
+  const [fitnessGoals, setFitnessGoals] = useState<string[]>(user?.fitnessGoals || []);
+  const [preferredWorkoutTypes, setPreferredWorkoutTypes] = useState<string[]>(user?.preferredWorkoutTypes || []);
+  const [healthConditions, setHealthConditions] = useState<string[]>(user?.healthConditions || []);
+  const [injuries, setInjuries] = useState<string[]>(user?.injuries || []);
+  const [dietaryPreferences, setDietaryPreferences] = useState<string[]>(user?.dietaryPreferences || []);
+  const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>(user?.dietaryRestrictions || []);
 
   // Error state
   const [errors, setErrors] = useState<{ [key: string]: string | null }>({});
 
   const [completeProfile, { loading }] = useMutation(COMPLETE_PROFILE, {
     onCompleted: (data) => {
-      setUser(data.completeProfile);
+      setUser(data.updateProfile);
       Alert.alert(
         'Profile Complete!',
         'Welcome to FitTrack! Your fitness journey starts now.',
@@ -94,66 +93,116 @@ const ProfileSetup: React.FC = () => {
     },
   });
 
-  // Validation per step
-  const validateStep = () => {
+  // Validation per step - now optional since we have skip functionality
+  const validateStep = (forceValidation = false) => {
     let stepErrors: { [key: string]: string } = {};
-    if (step === 0) {
-      if (!name.trim()) stepErrors.name = 'Name is required';
-      if (!age.trim() || isNaN(Number(age)) || Number(age) < 13 || Number(age) > 120)
-        stepErrors.age = 'Valid age (13-120) required';
-      if (!weight.trim() || isNaN(Number(weight)) || Number(weight) < 20 || Number(weight) > 500)
-        stepErrors.weight = 'Valid weight (20-500 kg) required';
-      if (!height.trim() || isNaN(Number(height)) || Number(height) < 100 || Number(height) > 250)
-        stepErrors.height = 'Valid height (100-250 cm) required';
-      if (!gender) stepErrors.gender = 'Gender is required';
+
+    // Only validate if forceValidation is true (for final submission)
+    if (forceValidation) {
+      if (step === 0) {
+        // Basic info - only validate the fields we actually use
+        if (weight.trim() && (isNaN(Number(weight)) || Number(weight) < 20 || Number(weight) > 500))
+          stepErrors.weight = 'Valid weight (20-500 kg) required';
+        if (height.trim() && (isNaN(Number(height)) || Number(height) < 100 || Number(height) > 250))
+          stepErrors.height = 'Valid height (100-250 cm) required';
+      }
     }
-    if (step === 1) {
-      if (!fitnessGoal) stepErrors.fitnessGoal = 'Select a goal';
-      if (!activityLevel) stepErrors.activityLevel = 'Select activity level';
-    }
+
     setErrors(stepErrors);
     return Object.keys(stepErrors).length === 0;
   };
 
   const handleNext = () => {
-    if (validateStep()) setStep((s) => s + 1);
+    validateStep(); // Clear any existing errors
+    setStep((s) => s + 1);
   };
-  const handleBack = () => setStep((s) => s - 1);
+
+  const handleSkip = () => {
+    setErrors({}); // Clear any errors when skipping
+    setStep((s) => s + 1);
+  };
+
+  const handleBack = () => {
+    setErrors({}); // Clear errors when going back
+    setStep((s) => s - 1);
+  };
 
   const handleSubmit = async () => {
-    if (!validateStep()) return;
+    if (!validateStep(true)) return; // Force validation for final submission
+
+    // Build input object with all available fields
+    const input: any = {};
+
+    // Physical stats
+    if (height.trim() && !isNaN(Number(height))) {
+      input.height = parseFloat(height);
+    }
+    if (weight.trim() && !isNaN(Number(weight))) {
+      input.weight = parseFloat(weight);
+    }
+
+    // Fitness preferences
+    if (fitnessLevel) {
+      input.fitnessLevel = fitnessLevel;
+    }
+    if (activityLevel) {
+      input.activityLevel = activityLevel;
+    }
+    if (fitnessGoals.length > 0) {
+      input.fitnessGoals = fitnessGoals;
+    }
+    if (preferredWorkoutTypes.length > 0) {
+      input.preferredWorkoutTypes = preferredWorkoutTypes;
+    }
+
+    // Health and dietary information
+    if (healthConditions.length > 0) {
+      input.healthConditions = healthConditions;
+    }
+    if (injuries.length > 0) {
+      input.injuries = injuries;
+    }
+    if (dietaryPreferences.length > 0) {
+      input.dietaryPreferences = dietaryPreferences;
+    }
+    if (dietaryRestrictions.length > 0) {
+      input.dietaryRestrictions = dietaryRestrictions;
+    }
+
     await completeProfile({
-      variables: {
-        name: name.trim(),
-        age: parseInt(age),
-        weight: parseFloat(weight),
-        height: parseFloat(height),
-        gender,
-        fitnessGoal,
-        dietaryPreference,
-        healthConditions,
-        activityLevel,
-        preferredWorkoutTypes,
-        dietaryRestrictions,
-      },
+      variables: { input },
     });
   };
 
-  // Helper to check if all required fields in the last step are filled
-const isLastStepComplete = () => {
-  // You can refine this logic as needed for your required fields
-  return (
-    healthConditions.length > 0 &&
-    dietaryRestrictions.length > 0
-  );
-};
+  // Helper to check if user has provided any meaningful profile data
+  const hasProfileData = () => {
+    return (
+      height.trim() ||
+      weight.trim() ||
+      fitnessLevel ||
+      activityLevel ||
+      fitnessGoals.length > 0 ||
+      preferredWorkoutTypes.length > 0 ||
+      healthConditions.length > 0 ||
+      injuries.length > 0 ||
+      dietaryPreferences.length > 0 ||
+      dietaryRestrictions.length > 0
+    );
+  };
 
   // Checkbox helpers
   const toggleCheckbox = (value: string, current: string[], setter: (values: string[]) => void) => {
     if (current.includes(value)) {
       setter(current.filter((item) => item !== value));
     } else {
-      setter([...current, value]);
+      // If selecting "none", clear all other selections
+      if (value === 'none') {
+        setter(['none']);
+      } else {
+        // If selecting something other than "none", remove "none" if it exists
+        const newValues = current.filter(item => item !== 'none');
+        setter([...newValues, value]);
+      }
     }
   };
 
@@ -173,105 +222,87 @@ const isLastStepComplete = () => {
   const StepScreens = [
     // Step 1: Basic Info
     <FormContainer key="step1">
-      <Title>Let's Get to Know You</Title>
-      <Subtitle>Fill in your basic info</Subtitle>
+      <Title>Your Physical Stats</Title>
+      <Subtitle>Help us personalize your fitness experience</Subtitle>
+      {(user?.height || user?.weight) && (
+        <InfoNote>Some fields are pre-filled from your registration ✓</InfoNote>
+      )}
       {renderProgress()}
-      <Input
-        placeholder="Name"
-        value={name}
-        onChangeText={setName}
-        editable={!loading}
-        style={{ borderColor: errors.name ? theme.colors.accent : undefined }}
-        placeholderTextColor={theme.colors.secondaryText}
-      />
-      {errors.name && <ErrorText>{errors.name}</ErrorText>}
-      <Input
-        placeholder="Age"
-        value={age}
-        onChangeText={text => setAge(text.replace(/[^0-9]/g, ''))}
-        keyboardType="numeric"
-        editable={!loading}
-        style={{ borderColor: errors.age ? theme.colors.accent : undefined }}
-        placeholderTextColor={theme.colors.secondaryText}
-      />
-      {errors.age && <ErrorText>{errors.age}</ErrorText>}
+
       <Input
         placeholder="Weight (kg)"
         value={weight}
         onChangeText={text => setWeight(text.replace(/[^0-9.]/g, ''))}
         keyboardType="numeric"
         editable={!loading}
-        style={{ borderColor: errors.weight ? theme.colors.accent : undefined }}
+        style={{
+          borderColor: errors.weight ? theme.colors.accent :
+                      (user?.weight ? theme.colors.primary + '40' : undefined)
+        }}
         placeholderTextColor={theme.colors.secondaryText}
       />
       {errors.weight && <ErrorText>{errors.weight}</ErrorText>}
+
       <Input
         placeholder="Height (cm)"
         value={height}
         onChangeText={text => setHeight(text.replace(/[^0-9.]/g, ''))}
         keyboardType="numeric"
         editable={!loading}
-        style={{ borderColor: errors.height ? theme.colors.accent : undefined }}
+        style={{
+          borderColor: errors.height ? theme.colors.accent :
+                      (user?.height ? theme.colors.primary + '40' : undefined)
+        }}
         placeholderTextColor={theme.colors.secondaryText}
       />
       {errors.height && <ErrorText>{errors.height}</ErrorText>}
-      <PickerContainer>
-        <Label>Gender</Label>
-        <PickerWrapper>
-          <StyledPicker
-            selectedValue={gender}
-            onValueChange={(itemValue) => setGender(itemValue as string)}
-            enabled={!loading}
-            dropdownIconColor={theme.colors.text}
-          >
-            <Picker.Item label="Select gender" value="" />
-            <Picker.Item label="Male" value="Male" />
-            <Picker.Item label="Female" value="Female" />
-          </StyledPicker>
-        </PickerWrapper>
-        {errors.gender && <ErrorText>{errors.gender}</ErrorText>}
-      </PickerContainer>
     </FormContainer>,
 
     // Step 2: Goals & Preferences
     <FormContainer key="step2">
-      <Title>Your Goals & Preferences</Title>
-      <Subtitle>Personalize your experience</Subtitle>
+      <Title>Your Fitness Goals</Title>
+      <Subtitle>Tell us about your fitness preferences</Subtitle>
       {renderProgress()}
+      <CheckboxContainer>
+        <Label>Fitness Goals</Label>
+        {[
+          { label: 'Lose Weight', value: 'weight_loss' },
+          { label: 'Gain Muscle', value: 'muscle_gain' },
+          { label: 'Maintain Health', value: 'maintain_health' },
+          { label: 'Improve Endurance', value: 'improve_endurance' },
+          { label: 'Build Strength', value: 'build_strength' }
+        ].map((goal) => (
+          <CheckboxRow key={goal.value}>
+            <Checkbox
+              onPress={() => toggleCheckbox(goal.value, fitnessGoals, setFitnessGoals)}
+            >
+              {fitnessGoals.includes(goal.value) && (
+                <Icon name="check" size={16} color={theme.colors.primary} />
+              )}
+            </Checkbox>
+            <CheckboxText>{goal.label}</CheckboxText>
+          </CheckboxRow>
+        ))}
+        {errors.fitnessGoals && <ErrorText>{errors.fitnessGoals}</ErrorText>}
+      </CheckboxContainer>
       <PickerContainer>
-        <Label>Fitness Goal</Label>
+        <Label>Fitness Level</Label>
         <PickerWrapper>
           <StyledPicker
-            selectedValue={fitnessGoal}
-            onValueChange={(itemValue) => setFitnessGoal(itemValue as string)}
+            selectedValue={fitnessLevel}
+            onValueChange={(itemValue) => setFitnessLevel(itemValue as string)}
             enabled={!loading}
             dropdownIconColor={theme.colors.text}
           >
-            <Picker.Item label="Lose Weight" value="Lose Weight" />
-            <Picker.Item label="Gain Muscle" value="Gain Muscle" />
-            <Picker.Item label="Maintain Health" value="Maintain Health" />
+            <Picker.Item label="Select fitness level" value="" />
+            <Picker.Item label="Beginner" value="beginner" />
+            <Picker.Item label="Intermediate" value="intermediate" />
+            <Picker.Item label="Advanced" value="advanced" />
           </StyledPicker>
         </PickerWrapper>
-        {errors.fitnessGoal && <ErrorText>{errors.fitnessGoal}</ErrorText>}
+        {errors.fitnessLevel && <ErrorText>{errors.fitnessLevel}</ErrorText>}
       </PickerContainer>
-      <PickerContainer>
-        <Label>Dietary Preference</Label>
-        <PickerWrapper>
-          <StyledPicker
-            selectedValue={dietaryPreference}
-            onValueChange={(itemValue) => setDietaryPreference(itemValue as string)}
-            enabled={!loading}
-            dropdownIconColor={theme.colors.text}
-          >
-            <Picker.Item label="None" value="None" />
-            <Picker.Item label="Vegan" value="Vegan" />
-            <Picker.Item label="Vegetarian" value="Vegetarian" />
-            <Picker.Item label="Gluten-Free" value="Gluten-Free" />
-            <Picker.Item label="Keto" value="Keto" />
-            <Picker.Item label="Paleo" value="Paleo" />
-          </StyledPicker>
-        </PickerWrapper>
-      </PickerContainer>
+
       <PickerContainer>
         <Label>Activity Level</Label>
         <PickerWrapper>
@@ -282,66 +313,135 @@ const isLastStepComplete = () => {
             dropdownIconColor={theme.colors.text}
           >
             <Picker.Item label="Select activity level" value="" />
-            <Picker.Item label="Sedentary" value="Sedentary" />
-            <Picker.Item label="Moderate" value="Moderate" />
-            <Picker.Item label="Active" value="Active" />
+            <Picker.Item label="Sedentary" value="sedentary" />
+            <Picker.Item label="Moderate" value="moderate" />
+            <Picker.Item label="Active" value="active" />
           </StyledPicker>
         </PickerWrapper>
         {errors.activityLevel && <ErrorText>{errors.activityLevel}</ErrorText>}
       </PickerContainer>
       <CheckboxContainer>
-      <Label>Preferred Workout Types</Label>
-      {['Strength', 'Cardio', 'Yoga', 'HIIT', 'Pilates'].map((type) => (
-        <CheckboxRow key={type}>
-          <Checkbox
-            onPress={() => toggleCheckbox(type, preferredWorkoutTypes, setPreferredWorkoutTypes)}
-          >
-            {preferredWorkoutTypes.includes(type) && (
-              <Icon name="check" size={16} color={theme.colors.primary} />
-            )}
-          </Checkbox>
-          <CheckboxText>{type}</CheckboxText>
-        </CheckboxRow>
-      ))}
-    </CheckboxContainer>
+        <Label>Preferred Workout Types</Label>
+        {[
+          { label: 'Strength', value: 'strength' },
+          { label: 'Cardio', value: 'cardio' },
+          { label: 'Yoga', value: 'yoga' },
+          { label: 'HIIT', value: 'hiit' },
+          { label: 'Pilates', value: 'pilates' }
+        ].map((workoutType) => (
+          <CheckboxRow key={workoutType.value}>
+            <Checkbox
+              onPress={() => toggleCheckbox(workoutType.value, preferredWorkoutTypes, setPreferredWorkoutTypes)}
+            >
+              {preferredWorkoutTypes.includes(workoutType.value) && (
+                <Icon name="check" size={16} color={theme.colors.primary} />
+              )}
+            </Checkbox>
+            <CheckboxText>{workoutType.label}</CheckboxText>
+          </CheckboxRow>
+        ))}
+      </CheckboxContainer>
     </FormContainer>,
 
-    // Step 3: Health & Finish
+    // Step 3: Health & Diet
     <FormContainer key="step3">
-  <Title>Health & Finish</Title>
-  <Subtitle>Almost done!</Subtitle>
-  {renderProgress()}
-  <CheckboxContainer>
-  <Label>Health Conditions</Label>
-  {['None', 'Diabetes', 'Hypertension', 'Heart Condition', 'Knee Injury', 'Back Pain', 'Asthma'].map((condition) => (
-    <CheckboxRow key={condition}>
-      <Checkbox
-        onPress={() => toggleCheckbox(condition, healthConditions, setHealthConditions)}
-      >
-        {healthConditions.includes(condition) && (
-          <Icon name="check" size={16} color={theme.colors.primary} />
-        )}
-      </Checkbox>
-      <CheckboxText>{condition}</CheckboxText>
-    </CheckboxRow>
-  ))}
-  </CheckboxContainer>
-  <CheckboxContainer>
-  <Label>Dietary Restrictions</Label>
-  {['None', 'Peanuts', 'Dairy', 'Gluten', 'Shellfish', 'Soy'].map((restriction) => (
-    <CheckboxRow key={restriction}>
-      <Checkbox
-        onPress={() => toggleCheckbox(restriction, dietaryRestrictions, setDietaryRestrictions)}
-      >
-        {dietaryRestrictions.includes(restriction) && (
-          <Icon name="check" size={16} color={theme.colors.primary} />
-        )}
-      </Checkbox>
-      <CheckboxText>{restriction}</CheckboxText>
-    </CheckboxRow>
-  ))}
-</CheckboxContainer>
-</FormContainer>
+      <Title>Health & Dietary Information</Title>
+      <Subtitle>Help us provide safer and more personalized recommendations</Subtitle>
+      {renderProgress()}
+
+      <CheckboxContainer>
+        <Label>Health Conditions (Optional)</Label>
+        {[
+          { label: 'Diabetes', value: 'diabetes' },
+          { label: 'High Blood Pressure', value: 'high_blood_pressure' },
+          { label: 'Heart Disease', value: 'heart_disease' },
+          { label: 'Asthma', value: 'asthma' },
+          { label: 'Arthritis', value: 'arthritis' },
+          { label: 'None', value: 'none' }
+        ].map((condition) => (
+          <CheckboxRow key={condition.value}>
+            <Checkbox
+              onPress={() => toggleCheckbox(condition.value, healthConditions, setHealthConditions)}
+            >
+              {healthConditions.includes(condition.value) && (
+                <Icon name="check" size={16} color={theme.colors.primary} />
+              )}
+            </Checkbox>
+            <CheckboxText>{condition.label}</CheckboxText>
+          </CheckboxRow>
+        ))}
+      </CheckboxContainer>
+
+      <CheckboxContainer>
+        <Label>Previous Injuries (Optional)</Label>
+        {[
+          { label: 'Knee Injury', value: 'knee_injury' },
+          { label: 'Back Injury', value: 'back_injury' },
+          { label: 'Shoulder Injury', value: 'shoulder_injury' },
+          { label: 'Ankle Injury', value: 'ankle_injury' },
+          { label: 'Wrist Injury', value: 'wrist_injury' },
+          { label: 'None', value: 'none' }
+        ].map((injury) => (
+          <CheckboxRow key={injury.value}>
+            <Checkbox
+              onPress={() => toggleCheckbox(injury.value, injuries, setInjuries)}
+            >
+              {injuries.includes(injury.value) && (
+                <Icon name="check" size={16} color={theme.colors.primary} />
+              )}
+            </Checkbox>
+            <CheckboxText>{injury.label}</CheckboxText>
+          </CheckboxRow>
+        ))}
+      </CheckboxContainer>
+
+      <CheckboxContainer>
+        <Label>Dietary Preferences (Optional)</Label>
+        {[
+          { label: 'Vegetarian', value: 'vegetarian' },
+          { label: 'Vegan', value: 'vegan' },
+          { label: 'Pescatarian', value: 'pescatarian' },
+          { label: 'Keto', value: 'keto' },
+          { label: 'Mediterranean', value: 'mediterranean' },
+          { label: 'No Preference', value: 'none' }
+        ].map((preference) => (
+          <CheckboxRow key={preference.value}>
+            <Checkbox
+              onPress={() => toggleCheckbox(preference.value, dietaryPreferences, setDietaryPreferences)}
+            >
+              {dietaryPreferences.includes(preference.value) && (
+                <Icon name="check" size={16} color={theme.colors.primary} />
+              )}
+            </Checkbox>
+            <CheckboxText>{preference.label}</CheckboxText>
+          </CheckboxRow>
+        ))}
+      </CheckboxContainer>
+
+      <CheckboxContainer>
+        <Label>Dietary Restrictions (Optional)</Label>
+        {[
+          { label: 'Gluten-Free', value: 'gluten_free' },
+          { label: 'Dairy-Free', value: 'dairy_free' },
+          { label: 'Nut Allergy', value: 'nut_allergy' },
+          { label: 'Shellfish Allergy', value: 'shellfish_allergy' },
+          { label: 'Low Sodium', value: 'low_sodium' },
+          { label: 'None', value: 'none' }
+        ].map((restriction) => (
+          <CheckboxRow key={restriction.value}>
+            <Checkbox
+              onPress={() => toggleCheckbox(restriction.value, dietaryRestrictions, setDietaryRestrictions)}
+            >
+              {dietaryRestrictions.includes(restriction.value) && (
+                <Icon name="check" size={16} color={theme.colors.primary} />
+              )}
+            </Checkbox>
+            <CheckboxText>{restriction.label}</CheckboxText>
+          </CheckboxRow>
+        ))}
+      </CheckboxContainer>
+    </FormContainer>,
+
   ];
 
   return (
@@ -355,7 +455,7 @@ const isLastStepComplete = () => {
           borderBottomRightRadius: 20,
           marginBottom: 8,
           padding: 18,
-          paddingTop: 38,
+          paddingTop: Math.max(insets.top + 18, 38),
           elevation: 2,
         }}
       >
@@ -373,7 +473,7 @@ const isLastStepComplete = () => {
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-start', paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
         >
-          <CenteredContainer>
+          <CenteredContainer paddingBottom={insets.bottom}>
             {StepScreens[step]}
           </CenteredContainer>
         </ScrollView>
@@ -383,40 +483,55 @@ const isLastStepComplete = () => {
               <SecondaryButtonText>Back</SecondaryButtonText>
             </SecondaryButton>
           )}
+
           {step < StepScreens.length - 1 ? (
-            <PrimaryButtonContainer>
-              <LinearGradient
-                colors={[theme.colors.primary, theme.colors.secondary]}
-                style={{ borderRadius: 10 }}
-              >
-                <TouchableOpacity
-                  onPress={handleNext}
-                  disabled={loading}
-                  style={{ width: '100%', alignItems: 'center', padding: 12 }}
+            <>
+              {/* Skip Button for non-final steps */}
+              <SkipButton onPress={handleSkip} disabled={loading}>
+                <SkipButtonText>Skip</SkipButtonText>
+              </SkipButton>
+
+              {/* Next Button */}
+              <PrimaryButtonContainer>
+                <LinearGradient
+                  colors={[theme.colors.primary, theme.colors.secondary]}
+                  style={{ borderRadius: 10 }}
                 >
-                  <PrimaryButtonText>
-                    Next
-                  </PrimaryButtonText>
-                </TouchableOpacity>
-              </LinearGradient>
-            </PrimaryButtonContainer>
+                  <TouchableOpacity
+                    onPress={handleNext}
+                    disabled={loading}
+                    style={{ width: '100%', alignItems: 'center', padding: 12 }}
+                  >
+                    <PrimaryButtonText>Next</PrimaryButtonText>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </PrimaryButtonContainer>
+            </>
           ) : (
-            <PrimaryButtonContainer>
-              <LinearGradient
-                colors={[theme.colors.primary, theme.colors.secondary]}
-                style={{ borderRadius: 10 }}
-              >
-                <TouchableOpacity
-                  onPress={isLastStepComplete() ? handleSubmit : () => navigation.navigate('Home')}
-                  disabled={loading}
-                  style={{ width: '100%', alignItems: 'center', padding: 12 }}
+            <>
+              {/* Skip/Complete Later Button for final step */}
+              <SkipButton onPress={() => navigation.navigate('Home')} disabled={loading}>
+                <SkipButtonText>Complete Later</SkipButtonText>
+              </SkipButton>
+
+              {/* Complete Profile Button */}
+              <PrimaryButtonContainer>
+                <LinearGradient
+                  colors={[theme.colors.primary, theme.colors.secondary]}
+                  style={{ borderRadius: 10 }}
                 >
-                  <PrimaryButtonText>
-                    {isLastStepComplete() ? (loading ? 'Completing...' : 'Complete Profile') : 'Skip for Now'}
-                  </PrimaryButtonText>
-                </TouchableOpacity>
-              </LinearGradient>
-            </PrimaryButtonContainer>
+                  <TouchableOpacity
+                    onPress={handleSubmit}
+                    disabled={loading}
+                    style={{ width: '100%', alignItems: 'center', padding: 12 }}
+                  >
+                    <PrimaryButtonText>
+                      {loading ? 'Saving...' : hasProfileData() ? 'Save Profile' : 'Complete Later'}
+                    </PrimaryButtonText>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </PrimaryButtonContainer>
+            </>
           )}
         </ButtonContainer>
       </KeyboardAvoidingView>
@@ -431,10 +546,11 @@ const Container = styled(SafeAreaView)`
   background-color: ${(props) => props.theme.colors.background};
 `;
 
-const CenteredContainer = styled.View`
+const CenteredContainer = styled.View<{ paddingBottom: number }>`
   flex: 1;
   width: 100%;
   padding: 20px;
+  padding-bottom: ${(props) => Math.max(props.paddingBottom + 20, 40)}px;
   justify-content: flex-start;
 `;
 
@@ -571,8 +687,8 @@ const ButtonContainer = styled.View`
   margin-bottom: 25px;
   margin-top: 15px;
   width: 100%;
-  max-width: 400px; 
-  align-self: center; 
+  max-width: 400px;
+  align-self: center;
   padding-left: 10px;
   padding-right: 10px;
 `;
@@ -585,12 +701,12 @@ const SecondaryButton = styled(TouchableOpacity)`
   margin-right: 8px;
   align-items: center;
   justify-content: center;
-  background-color: ${(props) => 
-    props.theme.colors.background === '#1C2526' 
-      ? 'rgba(255, 255, 255, 0.05)' 
+  background-color: ${(props) =>
+    props.theme.colors.background === '#1C2526'
+      ? 'rgba(255, 255, 255, 0.05)'
       : 'transparent'
   };
-  margin-left: 0; 
+  margin-left: 0;
 `;
 
 const SecondaryButtonText = styled.Text`
@@ -599,10 +715,31 @@ const SecondaryButtonText = styled.Text`
   color: ${(props) => props.theme.colors.primary};
 `;
 
+const SkipButton = styled(TouchableOpacity)`
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid ${(props) => props.theme.colors.secondaryText};
+  margin-right: 8px;
+  align-items: center;
+  justify-content: center;
+  background-color: ${(props) =>
+    props.theme.colors.background === '#1C2526'
+      ? 'rgba(255, 255, 255, 0.02)'
+      : 'rgba(0, 0, 0, 0.02)'
+  };
+`;
+
+const SkipButtonText = styled.Text`
+  font-family: ${(props) => props.theme.typography.fontFamily.regular};
+  font-size: ${(props) => props.theme.typography.fontSize.medium}px;
+  color: ${(props) => props.theme.colors.secondaryText};
+`;
+
 const PrimaryButtonContainer = styled.View`
   flex: 1;
   margin-left: 8px;
-  margin-right: 0; 
+  margin-right: 0;
 `;
 
 const PrimaryButtonText = styled.Text`
@@ -621,46 +758,16 @@ const ErrorText = styled.Text`
   padding-left: 4px;
 `;
 
-// ...existing code...
-
-const PillRow = styled.View`
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
+const InfoNote = styled.Text`
+  font-family: ${(props) => props.theme.typography.fontFamily.regular};
+  font-size: ${(props) => props.theme.typography.fontSize.small}px;
+  color: ${(props) => props.theme.colors.primary};
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background-color: ${(props) => props.theme.colors.primary}15;
+  border-radius: 8px;
+  border: 1px solid ${(props) => props.theme.colors.primary}30;
 `;
-
-const Pill = styled(TouchableOpacity)<{ selected: boolean }>`
-  padding: 4px 10px; 
-  border-radius: 14px; 
-  background-color: ${({ selected, theme }) =>
-    selected ? theme.colors.primary : theme.colors.background === '#1C2526'
-      ? 'rgba(255,255,255,0.08)'
-      : '#F0F0F0'};
-  border: 1px solid ${({ selected, theme }) =>
-    selected ? theme.colors.primary : theme.colors.secondaryText};
-  margin-bottom: 4px;
-`;
-
-const PillText = styled.Text<{ selected: boolean }>`
-  font-family: ${(props) => props.theme.typography.fontFamily.semiBold};
-  font-size: ${(props) => props.theme.typography.fontSize.xsmall || 12}px; 
-  color: ${({ selected, theme }) =>
-    selected ? theme.colors.white : theme.colors.text};
-`;
-
-const CheckboxGrid = styled.View`
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: space-between;
-`;
-
-const CheckboxGridItem = styled.View`
-  width: 48%;
-  flex-direction: row;
-  align-items: center;
-  margin-bottom: 8px;
-`;
-
 
 export default ProfileSetup;
