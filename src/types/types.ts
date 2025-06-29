@@ -1,4 +1,9 @@
 // types.ts
+// Export all types from other type files
+export * from './api';
+export * from './fitness';
+export * from './social';
+
 // TypeScript interfaces for the response
 export interface StepMedia {
   type: string;

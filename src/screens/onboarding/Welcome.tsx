@@ -17,17 +17,17 @@ type WelcomeNavigationProp = StackNavigationProp<RootStackParamList, 'Onboarding
 
 const Container = styled(SafeAreaView)`
   flex: 1;
-  background-color: ${(props) => props.theme.colors.background};
 `;
 
 const Content = styled(ScrollView)`
   flex: 1;
   padding: 20px;
+  background-color: ${(props) => props.theme.colors.background};
 `;
 
 const HeaderText = styled(Animated.Text)`
   font-family: ${(props) => props.theme.typography.fontFamily.bold};
-  font-size: ${(props) => props.theme.typography.fontSize.xxlarge}px;
+  font-size: ${(props) => props.theme.typography.fontSize['4xl']}px;
   color: ${(props) => props.theme.colors.text};
   text-align: center;
   margin-bottom: 10px;
@@ -35,7 +35,7 @@ const HeaderText = styled(Animated.Text)`
 
 const SubheaderText = styled(Animated.Text)`
   font-family: ${(props) => props.theme.typography.fontFamily.regular};
-  font-size: ${(props) => props.theme.typography.fontSize.large}px;
+  font-size: ${(props) => props.theme.typography.fontSize.lg}px;
   color: ${(props) => props.theme.colors.secondaryText};
   text-align: center;
   margin-bottom: 40px;
@@ -59,7 +59,7 @@ const AnimatedButton = styled(HapticButton)<{
 
 const ButtonText = styled.Text`
   font-family: ${(props) => props.theme.typography.fontFamily.semiBold};
-  font-size: ${(props) => props.theme.typography.fontSize.medium}px;
+  font-size: ${(props) => props.theme.typography.fontSize.md}px;
   color: ${(props) => props.theme.colors.white};
 `;
 
@@ -73,7 +73,7 @@ const SecondaryButton = styled.TouchableOpacity`
 
 const SecondaryButtonText = styled.Text`
   font-family: ${(props) => props.theme.typography.fontFamily.semiBold};
-  font-size: ${(props) => props.theme.typography.fontSize.medium}px;
+  font-size: ${(props) => props.theme.typography.fontSize.md}px;
   color: ${(props) => props.theme.colors.primary};
 `;
 

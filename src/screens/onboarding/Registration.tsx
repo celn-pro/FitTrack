@@ -17,11 +17,11 @@ const { height: screenHeight } = Dimensions.get('window');
 
 const Container = styled(SafeAreaView)`
   flex: 1;
-  background-color: ${(props) => props.theme.colors.background};
 `;
 
 const Content = styled(ScrollView)`
   flex: 1;
+  background-color: ${(props) => props.theme.colors.background};
 `;
 
 const CenteredContainer = styled.View<{ paddingTop: number; paddingBottom: number }>`

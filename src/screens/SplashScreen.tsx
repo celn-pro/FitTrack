@@ -15,6 +15,12 @@ const Container = styled(SafeAreaView)`
   flex: 1;
   justify-content: center;
   align-items: center;
+`;
+
+const BackgroundView = styled.View`
+  position: absolute;
+  width: 100%;
+  height: 100%;
   background-color: ${({ theme }) => theme.colors.background};
 `;
 
@@ -32,7 +38,7 @@ const Animation = styled(LottieView)`
 
 const AppName = styled(Animated.Text)`
   font-family: ${(props) => props.theme.typography.fontFamily.bold};
-  font-size: ${(props) => props.theme.typography.fontSize.xlarge}px;
+  font-size: ${(props) => props.theme.typography.fontSize.xl}px;
   color: black; // MaskedView uses this for the mask, color doesn't matter
   margin-top: 20px;
   text-align: center;
@@ -52,8 +58,8 @@ const AppNameGradient = ({ children, opacity }: { children: React.ReactNode; opa
       style={{
         fontFamily: theme.typography.fontFamily.bold, // Use bold only
         fontWeight: '900',
-        fontSize: theme.typography.fontSize.xlarge + 6,
-        lineHeight: (theme.typography.fontSize.xlarge + 6) * 1.18,
+        fontSize: theme.typography.fontSize.xl + 6,
+        lineHeight: (theme.typography.fontSize.xl + 6) * 1.18,
         color: 'black',
         marginTop: 20,
         textAlign: 'center',
@@ -79,8 +85,8 @@ const AppNameGradient = ({ children, opacity }: { children: React.ReactNode; opa
         style={{
           fontFamily: theme.typography.fontFamily.bold,
           fontWeight: '900',
-          fontSize: theme.typography.fontSize.xlarge + 6,
-          lineHeight: (theme.typography.fontSize.xlarge + 6) * 1.18,
+          fontSize: theme.typography.fontSize.xl + 6,
+          lineHeight: (theme.typography.fontSize.xl + 6) * 1.18,
           opacity: 0,
           marginTop: 20,
           textAlign: 'center',
@@ -138,6 +144,8 @@ const SplashScreen: React.FC = () => {
 
   return (
     <Container>
+      {/* Background */}
+      <BackgroundView />
       {/* Animated blobs background */}
       <LottieView
         source={require('../assets/animations/gradient-blobs.json')}

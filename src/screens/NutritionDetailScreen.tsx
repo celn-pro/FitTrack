@@ -1,57 +1,69 @@
 import React, { useEffect, useRef } from 'react';
-import { ScrollView, Linking, Animated, Text } from 'react-native';
+import { ScrollView, Linking, Animated, Text, StatusBar, TouchableOpacity } from 'react-native';
 import styled, { useTheme } from 'styled-components/native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 // import { NutritionRecommendation } from '../constants';
 import { Recommendation } from '../types/types';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const NutritionDetailScreen: React.FC = () => {
   const theme = useTheme();
   const route = useRoute<RouteProp<{ params: { nutrition: Recommendation } }, 'params'>>();
   const navigation = useNavigation();
   const { nutrition } = route.params;
-  const insets = useSafeAreaInsets();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Set status bar style based on theme
+    StatusBar.setBarStyle(
+      theme.colors.background === '#1C2526' ? 'light-content' : 'dark-content',
+      true
+    );
+
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 600,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [theme]);
 
   return (
-    <GradientContainer
-      colors={
-        theme.colors.background === '#1C2526'
-          ? [theme.colors.background, theme.colors.secondary]
-          : ['#F8F9FA', '#E6F0FA']
-      }
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
-    >
-       <HeaderRow>
-        <BackButton onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={26} color={theme.colors.primary} />
-        </BackButton>
-        <HeaderTitle numberOfLines={2}>{nutrition.title}</HeaderTitle>
-      </HeaderRow>
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 24,
-          paddingTop: 0,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
+    <SafeAreaView style={{ flex: 1 }}>
+      <Container>
+        <Header>
+          <LinearGradient
+            colors={[theme.colors.primary, theme.colors.secondary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderBottomLeftRadius: 20,
+              borderBottomRightRadius: 20,
+              paddingBottom: 18,
+              paddingTop: 0,
+            }}
+          >
+            <HeaderRow>
+              <TouchableOpacity onPress={() => navigation.goBack()}>
+                <Icon name="arrow-back" size={26} color={theme.colors.white} />
+              </TouchableOpacity>
+              <HeaderTitle numberOfLines={2}>{nutrition.title}</HeaderTitle>
+              <TouchableOpacity style={{ opacity: 0 }}>
+                <Icon name="arrow-back" size={26} color="transparent" />
+              </TouchableOpacity>
+            </HeaderRow>
+            <HeaderSubtitle>
+              {nutrition.category} • {nutrition.difficultyLevel} • {nutrition.estimatedDuration} min
+            </HeaderSubtitle>
+          </LinearGradient>
+        </Header>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingTop: 8 }}
+          showsVerticalScrollIndicator={false}
+        >
         <AnimatedCard style={{ opacity: fadeAnim }}>
           {nutrition.image && <CoverImage source={{ uri: nutrition.image }} />}
           <Description>{nutrition.description}</Description>
@@ -185,50 +197,55 @@ const NutritionDetailScreen: React.FC = () => {
             </>
           )}
         </AnimatedCard>
-      </ScrollView>
-    </GradientContainer>
+        </ScrollView>
+      </Container>
+    </SafeAreaView>
   );
 };
 
-const GradientContainer = styled(LinearGradient)`
+const Container = styled.View`
   flex: 1;
+  background-color: ${({ theme }) => theme.colors.background};
+`;
+
+const Header = styled.View`
+  position: relative;
 `;
 
 const HeaderRow = styled.View`
   flex-direction: row;
   align-items: center;
-  padding: 0 18px;
-  padding-top: 48px;
-  margin-bottom: 8px;
-`;
-
-const BackButton = styled.TouchableOpacity`
-  padding: 8px;
-  background-color: rgba(255,255,255,0.7);
-  border-radius: 20px;
-  margin-right: 10px;
+  justify-content: space-between;
+  padding: 18px 16px 0 16px;
 `;
 
 const HeaderTitle = styled.Text`
-  flex: 1;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: bold;
-  color: ${({ theme }) => theme.colors.primary};
-  text-align: left;
+  color: ${({ theme }) => theme.colors.white};
+  flex: 1;
+  text-align: center;
+  margin: 0 16px;
+`;
+
+const HeaderSubtitle = styled.Text`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.white};
+  text-align: center;
+  margin-top: 2px;
+  opacity: 0.85;
 `;
 
 const AnimatedCard = styled(Animated.View)`
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#232B34' : '#fff'};
-  border-radius: 22px;
-  padding: 28px 20px 20px 20px;
-  width: 100%;
-  max-width: 440px;
-  align-items: center;
-  elevation: 8;
+  background-color: ${({ theme }) => theme.colors.card};
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 16px;
   shadow-color: #000;
-  shadow-opacity: 0.10;
-  shadow-radius: 16px;
-  shadow-offset: 0px 6px;
+  shadow-offset: 0px 2px;
+  shadow-opacity: 0.1;
+  shadow-radius: 8px;
+  elevation: 4;
 `;
 
 const IconCircle = styled.View`

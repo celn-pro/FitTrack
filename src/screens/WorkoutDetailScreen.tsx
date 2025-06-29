@@ -6,7 +6,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import FastImage from 'react-native-fast-image';
 import { Recommendation } from '../types/types';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
@@ -17,6 +17,7 @@ const ExerciseMediaComponent: React.FC<{
   style?: any;
 }> = ({ source, mediaType, style }) => {
   const [imageError, setImageError] = useState(false);
+  const theme = useTheme();
 
   // Debug: Log the media URL and type
   useEffect(() => {
@@ -26,18 +27,18 @@ const ExerciseMediaComponent: React.FC<{
   // Handle empty or invalid URLs
   if (!source?.uri || source.uri.trim() === '') {
     return (
-      <View style={[style, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
-        <Icon name="image" size={40} color="#ccc" />
-        <Text style={{ color: '#999', fontSize: 12, marginTop: 8 }}>No {mediaType} URL</Text>
+      <View style={[style, { backgroundColor: theme.colors.card, justifyContent: 'center', alignItems: 'center' }]}>
+        <Icon name="image" size={40} color={theme.colors.border} />
+        <Text style={{ color: theme.colors.secondaryText, fontSize: 12, marginTop: 8 }}>No {mediaType} URL</Text>
       </View>
     );
   }
 
   if (imageError) {
     return (
-      <View style={[style, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
-        <Icon name="broken-image" size={40} color="#ccc" />
-        <Text style={{ color: '#999', fontSize: 12, marginTop: 8 }}>Failed to load {mediaType}</Text>
+      <View style={[style, { backgroundColor: theme.colors.card, justifyContent: 'center', alignItems: 'center' }]}>
+        <Icon name="broken-image" size={40} color={theme.colors.border} />
+        <Text style={{ color: theme.colors.secondaryText, fontSize: 12, marginTop: 8 }}>Failed to load {mediaType}</Text>
       </View>
     );
   }
@@ -71,7 +72,8 @@ const WorkoutDetailScreen: React.FC = () => {
   // Handle case where workout is null/undefined
   if (!workout) {
     return (
-      <Container>
+      <SafeAreaView style={{ flex: 1 }}>
+        <Container>
         <View style={{
           flex: 1,
           justifyContent: 'center',
@@ -109,14 +111,16 @@ const WorkoutDetailScreen: React.FC = () => {
             <Text style={{ color: '#fff', fontWeight: '600' }}>Go Back</Text>
           </TouchableOpacity>
         </View>
-      </Container>
+        </Container>
+      </SafeAreaView>
     );
   }
 
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    StatusBar.setBarStyle('light-content');
+    // Set status bar style based on theme
+    StatusBar.setBarStyle(theme.dark ? 'light-content' : 'dark-content');
 
     // Debug: Log the workout data
     console.log('=== WORKOUT DEBUG ===');
@@ -137,26 +141,27 @@ const WorkoutDetailScreen: React.FC = () => {
     return () => {
       StatusBar.setBarStyle('default');
     };
-  }, []);
+  }, [theme.dark]);
 
   return (
-    <Container>
-      {/* Fixed Header - Only Title and Back Arrow */}
-      <FixedHeader style={{ paddingTop: insets.top }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 15 }}>
-          <Icon name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600', flex: 1 }} numberOfLines={1}>
-          {workout?.title || 'Workout'}
-        </Text>
-      </FixedHeader>
+    <SafeAreaView style={{ flex: 1 }}>
+      <Container>
+        {/* Fixed Header - Only Title and Back Arrow */}
+        <FixedHeader>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 15 }}>
+            <Icon name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <HeaderTitle numberOfLines={1}>
+            {workout?.title || 'Workout'}
+          </HeaderTitle>
+        </FixedHeader>
 
-      {/* Scrollable Content - Everything else */}
-      <ScrollView
-        style={{ flex: 1, marginTop: insets.top + 60 }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 30 }}
-        showsVerticalScrollIndicator={false}
-      >
+        {/* Scrollable Content - Everything else */}
+        <ScrollView
+          style={{ flex: 1, marginTop: 60 }}
+          contentContainerStyle={{ paddingBottom: 30 }}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Hero Image Section - Now Scrollable */}
         <ScrollableHeroSection>
           {workout.image ? (
@@ -218,7 +223,7 @@ const WorkoutDetailScreen: React.FC = () => {
               });
 
               return (
-              <ExerciseCard key={idx}>
+                <ExerciseCard key={idx}>
                 <ExerciseHeader>
                   <ExerciseNumber>
                     <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{idx + 1}</Text>
@@ -309,7 +314,7 @@ const WorkoutDetailScreen: React.FC = () => {
                 <ExerciseDescription>
                   {step?.description || 'No description available.'}
                 </ExerciseDescription>
-              </ExerciseCard>
+                </ExerciseCard>
               );
             })}
           </Section>
@@ -340,8 +345,9 @@ const WorkoutDetailScreen: React.FC = () => {
             </Section>
           )}
         </ContentContainer>
-      </ScrollView>
-    </Container>
+        </ScrollView>
+      </Container>
+    </SafeAreaView>
   );
 };
 
@@ -352,16 +358,19 @@ const Container = styled.View`
 `;
 
 const FixedHeader = styled.View`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
   height: 60px;
   background-color: ${({ theme }) => theme.colors.primary};
-  z-index: 1000;
   padding-horizontal: 20px;
   flex-direction: row;
   align-items: center;
+  z-index: 1000;
+`;
+
+const HeaderTitle = styled.Text`
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  flex: 1;
 `;
 
 const ScrollableHeroSection = styled.View`
@@ -459,7 +468,7 @@ const Description = styled.Text`
 `;
 
 const ExerciseCard = styled.View`
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#2A3439' : '#fff'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 16px;
@@ -530,7 +539,7 @@ const ExerciseDescription = styled.Text`
   color: ${({ theme }) => theme.colors.text};
   margin-top: 8px;
   padding: 12px;
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#1A2328' : '#F5F5F5'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 8px;
   border-left-width: 3px;
   border-left-color: ${({ theme }) => theme.colors.primary};
@@ -539,7 +548,7 @@ const ExerciseDescription = styled.Text`
 const TipCard = styled.View`
   flex-direction: row;
   align-items: flex-start;
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#2A3439' : '#F8F9FA'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 12px;

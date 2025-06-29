@@ -2,20 +2,15 @@ import React, { useState, useCallback } from 'react';
 import {
   FlatList,
   RefreshControl,
-  ActivityIndicator,
   View,
   StyleSheet,
   Dimensions,
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  TouchableWithoutFeedback,
-  Keyboard,
   Alert,
 } from 'react-native';
 import styled, { useTheme } from 'styled-components/native';
-import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FastImage from 'react-native-fast-image';
 import { useAuthStore } from '../store/authStore';
@@ -23,10 +18,15 @@ import { useQuery, useMutation } from '@apollo/client';
 import { GET_SOCIAL_FEED, ADD_COMMENT, LIKE_POST, CREATE_FEED_POST, DELETE_FEED_POST, UPDATE_FEED_POST } from '../graphql/queries';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
-
-// Use a simple picker for dropdown (replace with your preferred dropdown)
 import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// New Components
+import { Screen, Header } from '../components/layout';
+import { Card, CardHeader, CardContent, Button, Avatar as UIAvatar, Modal as UIModal, LoadingSpinner } from '../components/ui';
+import { ScreenTransition } from '../components/navigation';
+import { ThemeType } from '../styles/theme';
+import { getActivityIcon as getActivityIconUtil } from '../utils/getHealthTipIcon';
 
 const { width } = Dimensions.get('window');
 
@@ -211,9 +211,11 @@ const handleSubmitPost = async () => {
   // --- Render ---
   if (loading && !refreshing) {
     return (
-      <Container>
-        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
-      </Container>
+      <Screen variant="default" padding>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <LoadingSpinner size="large" variant="gradient" />
+        </View>
+      </Screen>
     );
   }
 
@@ -238,59 +240,60 @@ const handleSubmitPost = async () => {
   }
 
   return (
-    <Container style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
-      <LinearGradient
-        colors={[theme.colors.primary, theme.colors.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerGradient}
-      >
-        <HeaderTitle>Community Feed</HeaderTitle>
-        <HeaderSubtitle>See what others are achieving and get inspired!</HeaderSubtitle>
-      </LinearGradient>
-      {posts.length === 0 ? (
-        <EmptyState>
-          <Icon name="people" size={40} color={theme.colors.secondary} />
-          <EmptyText>No posts yet. Start by sharing your progress!</EmptyText>
-        </EmptyState>
-      ) : (
-        <FlatList
-          data={posts}
-          keyExtractor={item => item.id}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
-            />
-          }
-          renderItem={({ item }) => (
-            <FeedCard>
-              <FeedHeader>
-                {item.user.avatar ? (
-                  <Avatar source={{ uri: item.user.avatar }} />
-                ) : (
-                  <AvatarPlaceholder>
-                    <Icon name="person" size={24} color={theme.colors.primary} />
-                  </AvatarPlaceholder>
-                )}
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <FeedUserName>{item.user.name}</FeedUserName>
-                  <FeedDate>{formatDate(item.createdAt)}</FeedDate>
-                </View>
-                {item.activityType && (
-                  <ActivityBadge>
-                    <Icon name={getActivityIcon(item.activityType)} size={16} color="#fff" />
-                    <ActivityBadgeText>
-                      {item.activityType === 'workout' && (item.activityValue ? `${item.activityValue}` : 'Workout')}
-                      {item.activityType === 'nutrition' && (item.activityValue ? `${item.activityValue}` : 'Nutrition')}
-                      {item.activityType === 'achievement' && (item.activityValue ? `${item.activityValue}` : 'Achievement')}
-                      {item.activityType === 'general' && (item.activityValue ? `${item.activityValue}` : 'General')}
-                    </ActivityBadgeText>
-                  </ActivityBadge>
-                )}
-              </FeedHeader>
+    <ScreenTransition type="slideUp">
+      <Screen variant="default" scrollable={false} padding={false}>
+        <Header
+          title="Community Feed"
+          subtitle="See what others are achieving and get inspired!"
+          variant="gradient"
+          rightIcon="add"
+          onRightPress={() => {
+            setEditingPost(null);
+            setPostForm({ content: '', activityType: '', activityValue: '', image: '' });
+            setShowPostModal(true);
+          }}
+        />
+        {posts.length === 0 ? (
+          <EmptyState>
+            <Icon name="people" size={40} color={theme.colors.secondary} />
+            <EmptyText>No posts yet. Start by sharing your progress!</EmptyText>
+          </EmptyState>
+        ) : (
+          <FlatList
+            data={posts}
+            keyExtractor={item => item.id}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[theme.colors.primary]}
+                tintColor={theme.colors.primary}
+              />
+            }
+            renderItem={({ item }) => (
+              <Card variant="default" margin="medium" padding="medium">
+                <CardHeader>
+                  <UIAvatar
+                    source={item.user.avatar}
+                    name={item.user.name}
+                    size="medium"
+                  />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <FeedUserName>{item.user.name}</FeedUserName>
+                    <FeedDate>{formatDate(item.createdAt)}</FeedDate>
+                  </View>
+                  {item.activityType && (
+                    <ActivityBadge>
+                      <Icon name={getActivityIcon(item.activityType)} size={16} color={theme.colors.white} />
+                      <ActivityBadgeText>
+                        {item.activityType === 'workout' && (item.activityValue ? `${item.activityValue}` : 'Workout')}
+                        {item.activityType === 'nutrition' && (item.activityValue ? `${item.activityValue}` : 'Nutrition')}
+                        {item.activityType === 'achievement' && (item.activityValue ? `${item.activityValue}` : 'Achievement')}
+                        {item.activityType === 'general' && (item.activityValue ? `${item.activityValue}` : 'General')}
+                      </ActivityBadgeText>
+                    </ActivityBadge>
+                  )}
+                </CardHeader>
               <FeedContent>{item.content}</FeedContent>
               {item.image && (
                 <FeedImage source={{ uri: item.image }} />
@@ -380,120 +383,115 @@ const handleSubmitPost = async () => {
                   </KeyboardAvoidingView>
                 </>
               )}
-            </FeedCard>
+              </Card>
           )}
           contentContainerStyle={{ paddingBottom: 40 }}
-        />
-      )}
-      {/* // FAB */}
-      <FAB onPress={() => {
-        setEditingPost(null);
-        setPostForm({ content: '', activityType: '', activityValue: '', image: '' });
-        setShowPostModal(true);
-      }}>
-        <Icon name="add" size={28} color="#fff" />
-      </FAB>
+          />
+        )}
 
-      {/* // Modal */}
-      <Modal
-        visible={showPostModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => {
-          setShowPostModal(false);
-          setEditingPost(null);
-        }}
-      >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <ModalOverlay>
-            <ModalContent>
-              <CloseIcon onPress={() => {
-                  setShowPostModal(false);
-                  setEditingPost(null);
-                }}>
-                  <Icon name="close" size={24} color={theme.colors.secondaryText} />
-              </CloseIcon>
-              <ModalTitle>{editingPost ? 'Edit Post' : 'Create Post'}</ModalTitle>
+        {/* Create Post Modal */}
+        <UIModal
+          visible={showPostModal}
+          onClose={() => {
+            setShowPostModal(false);
+            setEditingPost(null);
+          }}
+          title={editingPost ? 'Edit Post' : 'Create Post'}
+          variant="bottom"
+        >
+          <View>
+            <TextInput
+              placeholder="What's on your mind?"
+              value={postForm.content}
+              onChangeText={text => setPostForm(f => ({ ...f, content: text }))}
+              multiline
+              style={{
+                minHeight: 80,
+                marginBottom: 12,
+                color: theme.colors.text,
+                backgroundColor: theme.colors.surface,
+                borderRadius: 8,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }}
+              placeholderTextColor={theme.colors.secondaryText}
+            />
+
+            <Picker
+              selectedValue={postForm.activityType}
+              onValueChange={val => setPostForm(f => ({ ...f, activityType: val }))}
+              style={{
+                marginBottom: 12,
+                color: theme.colors.text,
+                backgroundColor: theme.colors.surface,
+                borderRadius: 8,
+              }}
+            >
+              <Picker.Item label="Select Activity Type" value="" />
+              {ACTIVITY_TYPES.map(type => (
+                <Picker.Item key={type.value} label={type.label} value={type.value} />
+              ))}
+            </Picker>
+
+            {postForm.activityType && (
               <TextInput
-                placeholder="What's on your mind?"
-                value={postForm.content}
-                onChangeText={text => setPostForm(f => ({ ...f, content: text }))}
-                multiline
+                placeholder="Activity Value (optional)"
+                value={postForm.activityValue}
+                onChangeText={val => setPostForm(f => ({ ...f, activityValue: val }))}
                 style={{
-                  minHeight: 80,
                   marginBottom: 12,
                   color: theme.colors.text,
-                  backgroundColor: theme.colors.card,
+                  backgroundColor: theme.colors.surface,
                   borderRadius: 8,
-                  padding: 10,
+                  padding: 12,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
                 }}
                 placeholderTextColor={theme.colors.secondaryText}
               />
-              <Picker
-                selectedValue={postForm.activityType}
-                onValueChange={val => setPostForm(f => ({ ...f, activityType: val }))}
-                style={{
-                  marginBottom: 12,
-                  color: theme.colors.text,
-                  backgroundColor: theme.colors.card,
-                  borderRadius: 8,
-                }}
-              >
-                <Picker.Item label="Select Activity Type" value="" />
-                {ACTIVITY_TYPES.map(type => (
-                  <Picker.Item key={type.value} label={type.label} value={type.value} />
-                ))}
-              </Picker>
-              {postForm.activityType && (
-                <TextInput
-                  placeholder="Activity Value (optional)"
-                  value={postForm.activityValue}
-                  onChangeText={val => setPostForm(f => ({ ...f, activityValue: val }))}
-                  keyboardType="default"
-                  style={{
-                    marginBottom: 12,
-                    color: theme.colors.text,
-                    backgroundColor: theme.colors.card,
-                    borderRadius: 8,
-                    padding: 10,
-                  }}
-                  placeholderTextColor={theme.colors.secondaryText}
+            )}
+
+            <TextInput
+              placeholder="Image URL (optional)"
+              value={postForm.image || ''}
+              onChangeText={val => setPostForm(f => ({ ...f, image: val }))}
+              style={{
+                marginBottom: 20,
+                color: theme.colors.text,
+                backgroundColor: theme.colors.surface,
+                borderRadius: 8,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }}
+              placeholderTextColor={theme.colors.secondaryText}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              {editingPost && (
+                <Button
+                  title="Delete"
+                  variant="ghost"
+                  onPress={handleDeletePost}
+                  icon="delete"
                 />
               )}
-              {/* --- Image URL input --- */}
-              <TextInput
-                placeholder="Image URL (optional)"
-                value={postForm.image || ''}
-                onChangeText={val => setPostForm(f => ({ ...f, image: val }))}
-                style={{
-                  marginBottom: 12,
-                  color: theme.colors.text,
-                  backgroundColor: theme.colors.card,
-                  borderRadius: 8,
-                  padding: 10,
-                }}
-                placeholderTextColor={theme.colors.secondaryText}
-                autoCapitalize="none"
-                autoCorrect={false}
+              <Button
+                title={creating ? 'Posting...' : editingPost ? 'Update' : 'Post'}
+                variant="primary"
+                disabled={creating || !postForm.content.trim()}
+                loading={creating}
+                onPress={handleSubmitPost}
+                style={{ marginLeft: 'auto' }}
               />
-              <ModalActions>
-                {editingPost && (
-                  <DeleteButton onPress={handleDeletePost}>
-                    <Icon name="delete" size={20} color={theme.colors.accent} />
-                  </DeleteButton>
-                )}
-                <SubmitButton
-                  disabled={creating || !postForm.content.trim()}
-                  onPress={handleSubmitPost}
-                >
-                  <SubmitText>{creating ? 'Posting...' : editingPost ? 'Update' : 'Post'}</SubmitText>
-                </SubmitButton>
-              </ModalActions>
-            </ModalContent>
-          </ModalOverlay>
-        </TouchableWithoutFeedback>
-      </Modal>
-    </Container>
+            </View>
+          </View>
+        </UIModal>
+      </Screen>
+    </ScreenTransition>
   );
 };
 
@@ -560,7 +558,7 @@ const HeaderSubtitle = styled.Text`
 
 const FeedCard = styled.View`
   position: relative;
-  background-color: ${({ theme }) => theme.colors.card || '#f6f8fa'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 14px;
   margin: 12px 18px;
   padding: 16px 14px 10px 14px;
@@ -581,14 +579,14 @@ const Avatar = styled(FastImage)`
   width: 38px;
   height: 38px;
   border-radius: 19px;
-  background-color: #eee;
+  background-color: ${({ theme }) => theme.colors.border};
 `;
 
 const AvatarPlaceholder = styled.View`
   width: 38px;
   height: 38px;
   border-radius: 19px;
-  background-color: #eee;
+  background-color: ${({ theme }) => theme.colors.border};
   align-items: center;
   justify-content: center;
 `;
@@ -614,7 +612,7 @@ const ActivityBadge = styled.View`
 `;
 
 const ActivityBadgeText = styled.Text`
-  color: #fff;
+  color: ${({ theme }) => theme.colors.white};
   font-size: 12px;
   margin-left: 4px;
 `;
@@ -672,7 +670,7 @@ const CommentInputRow = styled.View`
 const CommentInput = styled.TextInput`
   flex: 1;
   border-width: 1px;
-  border-color: ${({ theme }) => theme.colors.card || '#eaeaea'};
+  border-color: ${({ theme }) => theme.colors.border};
   border-radius: 18px;
   padding: 8px 14px;
   font-size: 14px;
@@ -699,7 +697,7 @@ const CommentAvatar = styled(FastImage)`
   width: 22px;
   height: 22px;
   border-radius: 11px;
-  background-color: #eee;
+  background-color: ${({ theme }) => theme.colors.border};
   margin-right: 8px;
 `;
 
@@ -707,14 +705,14 @@ const CommentAvatarPlaceholder = styled.View`
   width: 22px;
   height: 22px;
   border-radius: 11px;
-  background-color: #eee;
+  background-color: ${({ theme }) => theme.colors.border};
   align-items: center;
   justify-content: center;
   margin-right: 8px;
 `;
 
 const CommentBubble = styled.View`
-  background-color: ${({ theme }) => theme.colors.card || '#f6f8fa'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 10px;
   padding: 6px 10px;
   flex: 1;
@@ -791,7 +789,7 @@ const SubmitButton = styled.TouchableOpacity`
 `;
 
 const SubmitText = styled.Text`
-  color: #fff;
+  color: ${({ theme }) => theme.colors.white};
   font-weight: 600;
   font-size: 15px;
 `;

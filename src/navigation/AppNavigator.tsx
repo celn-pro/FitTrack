@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ThemeProvider } from 'styled-components/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../hooks/useTheme';
+import { AnimatedTabBar } from '../components/navigation';
 import SplashScreen from '../screens/SplashScreen';
 import Welcome from '../screens/onboarding/Welcome';
 import Registration from '../screens/onboarding/Registration';
@@ -40,67 +41,144 @@ const MainTabs: React.FC = () => {
   const { theme } = useTheme();
   return (
     <Tab.Navigator
-    screenOptions={({ route }) => ({
-        tabBarIcon: ({ color, size }) => {
-          let iconName: string = 'home';
-          if (route.name === 'Home') iconName = 'home';
-          else if (route.name === 'Tracking') iconName = 'fitness-center';
-          else if( route.name === 'Courses') iconName = 'school';
-          else if (route.name === 'Profile') iconName = 'person';
-          else if (route.name === 'Social') iconName = 'group';
-          else if (route.name === 'Settings') iconName = 'settings';
-          return <Icon name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.secondaryText,
-        tabBarStyle: {
-          backgroundColor: theme.colors.background,
-          borderTopWidth: 0,
-        },
-      })}
-  >
-    <Tab.Screen name="Home" component={Home} options={{ headerShown: false }} />
-    <Tab.Screen name="Tracking" component={ActivityTracking} options={{ headerShown: false }} />
-    <Tab.Screen name="Social" component={SocialFeed} options={{ headerShown: false }} />
-    <Tab.Screen name="Courses" component={CoursesScreen} options={{ headerShown: false }} />
-    <Tab.Screen name="Profile" component={Profile} options={{ headerShown: false }} />
-    {/* <Tab.Screen name="Settings" component={Settings} options={{ headerShown: false }} /> */}
-  </Tab.Navigator>
-  )
+      tabBar={(props) => <AnimatedTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+        tabBarHideOnKeyboard: true,
+      }}
+    >
+      <Tab.Screen
+        name="Home"
+        component={Home}
+        options={{
+          tabBarLabel: 'Home',
+        }}
+      />
+      <Tab.Screen
+        name="Tracking"
+        component={ActivityTracking}
+        options={{
+          tabBarLabel: 'Activity',
+        }}
+      />
+      <Tab.Screen
+        name="Social"
+        component={SocialFeed}
+        options={{
+          tabBarLabel: 'Social',
+        }}
+      />
+      <Tab.Screen
+        name="Courses"
+        component={CoursesScreen}
+        options={{
+          tabBarLabel: 'Learn',
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={Profile}
+        options={{
+          tabBarLabel: 'Profile',
+        }}
+      />
+    </Tab.Navigator>
+  );
 };
 
 const AppNavigator: React.FC = () => {
   const { theme } = useTheme();
 
+  const screenOptions = {
+    headerShown: false,
+    animation: 'slide_from_right' as const,
+    animationDuration: 300,
+  };
+
+  const modalScreenOptions = {
+    headerShown: false,
+    presentation: 'modal' as const,
+    animation: 'slide_from_bottom' as const,
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Splash">
-          <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="OnboardingWelcome" component={Welcome} options={{ headerShown: false }} />
-          <Stack.Screen name="OnboardingRegistration" component={Registration} options={{ headerShown: false }} />
-          <Stack.Screen name="OnboardingProfileSetup" component={ProfileSetup} options={{ headerShown: false }} />
-          <Stack.Screen name="Home" component={MainTabs} options={{ headerShown: false }} />
-          <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
-          <Stack.Screen name="Profile" component={Profile} options={{ headerShown: false }} />
-          <Stack.Screen name="MealPlanning" component={MealPlanning} options={{ headerShown: false }} />
-          <Stack.Screen name="Recommendations" component={Recommendations} options={{ headerShown: false }} />
-          <Stack.Screen name="ProgressTracking" component={ProgressTracking} options={{ headerShown: false }} />
-          <Stack.Screen name="SocialFeed" component={SocialFeed} options={{ headerShown: false }} />
-          <Stack.Screen name="Settings" component={Settings} options={{ headerShown: false }} />
-          <Stack.Screen name="NotificationCenter" component={NotificationCenter} options={{ headerShown: false }} />
-          <Stack.Screen name="Chatbot" component={Chatbot} options={{ headerShown: false }} />
-          <Stack.Screen name="ARWorkout" component={ARWorkout} options={{ headerShown: false }} />
-          <Stack.Screen name="ErrorOffline" component={ErrorOffline} options={{ headerShown: false }} />
-          <Stack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="NutritionDetail" component={NutritionDetailScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="HydrationDetail" component={HydrationDetailScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="RestDetail" component={RestDetailScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="HealthTipDetail" component={HealthTipDetailScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="DidYouKnowDetail" component={DidYouKnowDetailScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Courses" component={CoursesScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="CourseDetail" component={CourseDetailScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="TopicDetail" component={TopicDetailScreen} options={{ headerShown: false }} />
+        <Stack.Navigator
+          initialRouteName="Splash"
+          screenOptions={screenOptions}
+        >
+          {/* Auth & Onboarding Screens */}
+          <Stack.Screen
+            name="Splash"
+            component={SplashScreen}
+            options={{ animation: 'fade' }}
+          />
+          <Stack.Screen
+            name="OnboardingWelcome"
+            component={Welcome}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="OnboardingRegistration"
+            component={Registration}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="OnboardingProfileSetup"
+            component={ProfileSetup}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="Login"
+            component={Login}
+            options={{ animation: 'slide_from_bottom' }}
+          />
+
+          {/* Main App */}
+          <Stack.Screen
+            name="Home"
+            component={MainTabs}
+            options={{ animation: 'fade' }}
+          />
+
+          {/* Detail Screens */}
+          <Stack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} />
+          <Stack.Screen name="NutritionDetail" component={NutritionDetailScreen} />
+          <Stack.Screen name="HydrationDetail" component={HydrationDetailScreen} />
+          <Stack.Screen name="RestDetail" component={RestDetailScreen} />
+          <Stack.Screen name="HealthTipDetail" component={HealthTipDetailScreen} />
+          <Stack.Screen name="DidYouKnowDetail" component={DidYouKnowDetailScreen} />
+          <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
+          <Stack.Screen name="TopicDetail" component={TopicDetailScreen} />
+
+          {/* Modal Screens */}
+          <Stack.Screen
+            name="Settings"
+            component={Settings}
+            options={modalScreenOptions}
+          />
+          <Stack.Screen
+            name="NotificationCenter"
+            component={NotificationCenter}
+            options={modalScreenOptions}
+          />
+          <Stack.Screen
+            name="Chatbot"
+            component={Chatbot}
+            options={modalScreenOptions}
+          />
+
+          {/* Other Screens */}
+          <Stack.Screen name="MealPlanning" component={MealPlanning} />
+          <Stack.Screen name="Recommendations" component={Recommendations} />
+          <Stack.Screen name="ProgressTracking" component={ProgressTracking} />
+          <Stack.Screen name="ARWorkout" component={ARWorkout} />
+          <Stack.Screen
+            name="ErrorOffline"
+            component={ErrorOffline}
+            options={{ animation: 'fade' }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </ThemeProvider>

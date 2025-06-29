@@ -492,7 +492,7 @@ const CoursesGrid = styled.View`
 
 const ModernCourseCard = styled.TouchableOpacity`
   width: 48%;
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#2A3439' : '#FFFFFF'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
   margin-bottom: 16px;
   shadow-color: #000;
@@ -570,7 +570,7 @@ const CourseMetaRow = styled.View`
 const MetaChip = styled.View`
   flex-direction: row;
   align-items: center;
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#1A2328' : '#F5F5F5'};
+  background-color: ${({ theme }) => theme.colors.surface};
   padding: 6px 10px;
   border-radius: 14px;
   margin-right: 8px;
@@ -615,9 +615,9 @@ const FilterTab = styled.TouchableOpacity<{ active: boolean }>`
   margin-right: 12px;
   border-radius: 20px;
   background-color: ${({ active, theme }) =>
-    active ? theme.colors.primary : theme.colors.background === '#1C2526' ? '#2A3439' : '#F5F5F5'};
+    active ? theme.colors.primary : theme.colors.card};
   border: 1px solid ${({ active, theme }) =>
-    active ? theme.colors.primary : theme.colors.background === '#1C2526' ? '#3A4449' : '#E0E0E0'};
+    active ? theme.colors.primary : theme.colors.border};
 `;
 
 const FilterTabText = styled.Text<{ active: boolean }>`

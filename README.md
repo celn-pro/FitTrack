@@ -1,8 +1,34 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# FitTrack - Health & Fitness Tracking App
 
-# Getting Started
+A modern, professional-grade React Native health and fitness tracking application designed for DIT students. Built with cutting-edge technologies and best practices for optimal performance and user experience.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 🌟 Features
+
+### Core Functionality
+- **User Authentication & Profile Management** - Secure login/registration with comprehensive profile setup
+- **Activity Tracking** - Track workouts, nutrition, hydration, and sleep
+- **Social Feed** - Share achievements and connect with the fitness community
+- **Learning Platform** - Access fitness courses and educational content
+- **Personalized Recommendations** - AI-powered suggestions based on user data
+- **Progress Analytics** - Detailed insights and progress tracking
+
+### Modern UI/UX
+- **Material Design 3** - Clean, modern interface with smooth animations
+- **Dark/Light Theme** - Automatic theme switching with system preference detection
+- **Responsive Design** - Optimized for all screen sizes and orientations
+- **Accessibility** - Full accessibility support with screen readers and high contrast
+- **Haptic Feedback** - Enhanced user interaction with tactile responses
+
+### Technical Excellence
+- **TypeScript** - Full type safety and enhanced developer experience
+- **GraphQL** - Efficient data fetching with Apollo Client
+- **Offline Support** - Cached data and offline functionality
+- **Performance Optimized** - Lazy loading, memoization, and bundle optimization
+- **Error Handling** - Comprehensive error boundaries and user-friendly error messages
+
+## 🚀 Getting Started
+
+> **Note**: Make sure you have completed the [React Native Environment Setup](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
 ## Step 1: Start Metro
 

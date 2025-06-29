@@ -576,7 +576,7 @@ const TopicDesc = styled.Text`
 `;
 
 const StepCard = styled.View`
-  background-color: ${({ theme }) => theme.colors.card || '#f8fafc'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 12px;
@@ -615,7 +615,7 @@ const MarkCompletedBtn = styled.TouchableOpacity<{ completed: boolean }>`
 `;
 
 const MarkCompletedText = styled.Text<{ completed: boolean }>`
-  color: #fff;
+  color: ${({ theme }) => theme.colors.white};
   font-weight: bold;
   font-size: 16px;
 `;
@@ -653,7 +653,7 @@ const VideoBox = styled.View`
 const MetaSection = styled.View`
   margin-bottom: 16px;
   padding: 16px;
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#2A3439' : '#F8F9FA'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 12px;
 `;
 
@@ -698,7 +698,7 @@ const LessonMetaText = styled.Text`
 const ExerciseSection = styled.View`
   margin-top: 16px;
   padding: 16px;
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#1A2328' : '#F0F8FF'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 12px;
 `;
 
@@ -712,7 +712,7 @@ const ExerciseTitle = styled.Text`
 const ExerciseCard = styled.View`
   margin-bottom: 16px;
   padding: 12px;
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#2A3439' : '#FFFFFF'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 8px;
   border-left-width: 3px;
   border-left-color: ${({ theme }) => theme.colors.primary};
@@ -754,7 +754,7 @@ const ExerciseDetailText = styled.Text`
 const QuizSection = styled.View`
   margin-top: 16px;
   padding: 16px;
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#1A2328' : '#FFF8E1'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 12px;
 `;
 
@@ -825,7 +825,7 @@ const ProgressBar = styled.View<{ width: number }>`
 
 // Enrollment components
 const EnrollmentCard = styled.View`
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#2A3439' : '#FFFFFF'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 20px;
@@ -873,7 +873,7 @@ const EnrollButtonText = styled.Text`
 
 // Learning dashboard components
 const LearningDashboard = styled.View`
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#2A3439' : '#F8F9FA'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 20px;
@@ -904,7 +904,7 @@ const StatCard = styled.View`
   align-items: center;
   padding: 12px;
   margin: 0 4px;
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#1A2328' : '#FFFFFF'};
+  background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 12px;
 `;
 
@@ -923,7 +923,7 @@ const StatLabel = styled.Text`
 
 // Enhanced lesson components
 const LessonCard = styled.View<{ completed: boolean; current: boolean }>`
-  background-color: ${({ theme }) => theme.colors.background === '#1C2526' ? '#2A3439' : '#FFFFFF'};
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
   margin-bottom: 16px;
   padding: 20px;

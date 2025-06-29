@@ -465,7 +465,7 @@ const ProfileSetup: React.FC = () => {
         </Subtitle>
       </LinearGradient>
       <KeyboardAvoidingView
-        style={{ flex: 1, width: '100%' }}
+        style={{ flex: 1, width: '100%', backgroundColor: theme.colors.background }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
@@ -543,7 +543,6 @@ const ProfileSetup: React.FC = () => {
 
 const Container = styled(SafeAreaView)`
   flex: 1;
-  background-color: ${(props) => props.theme.colors.background};
 `;
 
 const CenteredContainer = styled.View<{ paddingBottom: number }>`

@@ -4,11 +4,9 @@ import { onError } from '@apollo/client/link/error';
 import { useAuthStore } from '../store/authStore';
 import { API_BASE_URL } from '../utils/env';
 
-// Make sure this points to /graphql endpoint
-const HTTP_ENDPOINT = 'http://10.0.2.2:4000/graphql'; // Add /graphql if missing
-
+// Use API_BASE_URL from environment configuration
 const httpLink = createHttpLink({
-  uri: HTTP_ENDPOINT,
+  uri: API_BASE_URL,
 });
 
 // Auth link - simplified
@@ -24,7 +22,7 @@ const authLink = setContext((_, { headers }) => {
 });
 
 // Enhanced error link
-const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
+const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {
     graphQLErrors.forEach(({ message, locations, path }) => {
       console.error(

@@ -1,3 +1,8 @@
+// Export all constants
+export * from './app';
+export * from './fitness';
+
+// Existing interfaces and mock data
 export interface WorkoutStep {
   title: string;
   description: string;
